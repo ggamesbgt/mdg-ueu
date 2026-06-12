@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Time Series Smart Citizen - Kabupaten Tangerang</title>
+
+  <style>
+    :root {
+      --bg:#f8fafd;
+      --card:#ffffff;
+      --primary:#0066ff;
+      --green:#10b981;
+      --text:#111827;
+      --muted:#6b7280;
+      --border:#e5e7eb;
+      --shadow:0 18px 45px rgba(15,23,42,.08);
+      --radius:22px;
+    }
+
+    * { box-sizing:border-box; }
+
+    body {
+      margin:0;
+      font-family: Arial, Helvetica, sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+
+    .page {
+      width:min(1180px, calc(100% - 28px));
+      margin:auto;
+      padding:28px 0 50px;
+    }
+
+    .hero, .card {
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:24px;
+      margin-bottom:22px;
+    }
+
+    h1 {
+      margin:0 0 10px;
+      font-size:clamp(28px, 5vw, 46px);
+      letter-spacing:-.04em;
+    }
+
+    h2 {
+      margin:0 0 16px;
+      font-size:22px;
+    }
+
+    .subtitle {
+      color:var(--muted);
+      line-height:1.6;
+      margin:0;
+    }
+
+    .controls {
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-top:22px;
+    }
+
+    input, select, button {
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:12px 14px;
+      font-size:14px;
+      background:#fff;
+    }
+
+    button {
+      background:var(--primary);
+      color:#fff;
+      font-weight:700;
+      cursor:pointer;
+    }
+
+    .device-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));
+      gap:16px;
+      margin-top:18px;
+    }
+
+    .device {
+      background:#f9fbff;
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:16px;
+    }
+
+    .device-name {
+      font-weight:800;
+      margin-bottom:8px;
+    }
+
+    .small {
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.6;
+    }
+
+    .badge {
+      display:inline-block;
+      background:#e7f8f1;
+      color:#047857;
+      padding:5px 9px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:800;
+      margin-top:8px;
+    }
+
+    canvas {
+      width:100%;
+      height:420px;
+      border-radius:18px;
+      background:#ffffff;
+      border:1px solid var(--border);
+    }
+
+    .chart-wrap {
+      overflow-x:auto;
+    }
+
+    .message {
+      background:#fff7e6;
+      color:#92400e;
+      padding:14px;
+      border-radius:14px;
+      font-weight:700;
+      line-height:1.6;
+    }
+
+    .error {
+      background:#fee2e2;
+      color:#991b1b;
+    }
+
+    .legend {
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      margin:14px 0 0;
+      color:var(--muted);
+      font-size:13px;
+    }
+
+    .dot {
+      width:10px;
+      height:10px;
+      display:inline-block;
+      border-radius:50%;
+      margin-right:6px;
+    }
+
+    @media(max-width:640px) {
+      canvas { height:330px; }
+      .hero, .card { padding:18px; }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>Time Series Sensor Kabupaten Tangerang</h1>
+      <p class="subtitle">
+        Dashboard ini mengambil data historis dari 3 perangkat Smart Citizen:
+        19686, 19684, dan 19682. Sensor suhu dan kelembapan dicari otomatis dari metadata device.
+      </p>
+
+      <div class="controls">
+        <select id="metricSelect">
+          <option value="temperature">Air Temperature</option>
+          <option value="humidity">Relative Humidity</option>
+        </select>
+
+        <select id="rangeSelect">
+          <option value="24h">24 Jam Terakhir</option>
+          <option value="3d">3 Hari Terakhir</option>
+          <option value="7d">7 Hari Terakhir</option>
+        </select>
+
+        <select id="rollupSelect">
+          <option value="1h">Rollup 1 Jam</option>
+          <option value="3h">Rollup 3 Jam</option>
+          <option value="1d">Rollup 1 Hari</option>
+        </select>
+
+        <button onclick="loadDashboard()">Muat Ulang Data</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Informasi Device</h2>
+      <div id="deviceGrid" class="device-grid">
+        <div class="message">Memuat metadata device...</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 id="chartTitle">Chart Time Series</h2>
+      <div id="statusMessage" class="message">Mengambil data time series...</div>
+
+      <div class="chart-wrap">
+        <canvas id="timeSeriesChart" width="1100" height="420"></canvas>
+      </div>
+
+      <div id="legend" class="legend"></div>
+    </section>
+
+    <section class="card">
+      <h2>Analisis Otomatis</h2>
+      <div id="analysis" class="small">Analisis akan muncul setelah data berhasil dimuat.</div>
+    </section>
+  </main>
+
+  <script>
+    const devices = [
+      { id: "19686" },
+      { id: "19684" },
+      { id: "19682" }
+    ];
+
+    const API_BASE = "https://api.smartcitizen.me/v0/devices/";
+    const colors = ["#0066ff", "#10b981", "#f59e0b"];
+
+    function getDateRange() {
+      const range = document.getElementById("rangeSelect").value;
+      const to = new Date();
+      const from = new Date();
+
+      if (range === "24h") from.setHours(from.getHours() - 24);
+      if (range === "3d") from.setDate(from.getDate() - 3);
+      if (range === "7d") from.setDate(from.getDate() - 7);
+
+      return {
+        from: from.toISOString(),
+        to: to.toISOString()
+      };
+    }
+
+    async function fetchDeviceMetadata(deviceId) {
+      const res = await fetch(API_BASE + deviceId);
+      if (!res.ok) throw new Error("Gagal mengambil metadata device " + deviceId);
+      return await res.json();
+    }
+
+    function getSensors(data) {
+      if (data.data && Array.isArray(data.data.sensors)) return data.data.sensors;
+      if (Array.isArray(data.sensors)) return data.sensors;
+      return [];
+    }
+
+    function sensorText(sensor) {
+      return [
+        sensor.name,
+        sensor.description,
+        sensor.unit,
+        sensor.measurement && sensor.measurement.name,
+        sensor.measurement && sensor.measurement.description
+      ].filter(Boolean).join(" ").toLowerCase();
+    }
+
+    function findSensorByMetric(sensors, metric) {
+      if (metric === "temperature") {
+        return sensors.find(sensor => {
+          const text = sensorText(sensor);
+          return text.includes("air temperature") ||
+                 text.includes("temperature") ||
+                 text.includes("temp") ||
+                 text.includes("°c") ||
+                 text.includes("ºc");
+        });
+      }
+
+      if (metric === "humidity") {
+        return sensors.find(sensor => {
+          const text = sensorText(sensor);
+          return text.includes("relative humidity") ||
+                 text.includes("humidity");
+        });
+      }
+
+      return null;
+    }
+
+    async function fetchReadings(deviceId, sensorId, rollup, from, to) {
+      const url =
+        API_BASE + deviceId +
+        "/readings?sensor_id=" + sensorId +
+        "&rollup=" + encodeURIComponent(rollup) +
+        "&from=" + encodeURIComponent(from) +
+        "&to=" + encodeURIComponent(to) +
+        "&function=avg";
+
+      const res = await fetch(url);
+
+      if (!res.ok) {
+        throw new Error("Gagal mengambil readings device " + deviceId + ", sensor " + sensorId);
+      }
+
+      return await res.json();
+    }
+
+    function normalizeReadings(json) {
+      let readings = [];
+
+      if (Array.isArray(json.readings)) {
+        readings = json.readings;
+      } else if (Array.isArray(json)) {
+        readings = json;
+      } else if (json.data && Array.isArray(json.data.readings)) {
+        readings = json.data.readings;
+      }
+
+      return readings.map(item => {
+        if (Array.isArray(item)) {
+          return {
+            time: new Date(item[0]),
+            value: Number(item[1])
+          };
+        }
+
+        return {
+          time: new Date(item.recorded_at || item.time || item.date),
+          value: Number(item.value || item.avg || item.y)
+        };
+      }).filter(d => !isNaN(d.time.getTime()) && !isNaN(d.value));
+    }
+
+    function formatDateLabel(date) {
+      return date.toLocaleString("id-ID", {
+        day: "2-digit",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    function drawLineChart(seriesData, metricLabel, unit) {
+      const canvas = document.getElementById("timeSeriesChart");
+      const ctx = canvas.getContext("2d");
+
+      const width = canvas.width;
+      const height = canvas.height;
+
+      ctx.clearRect(0, 0, width, height);
+
+      const padding = {
+        left: 64,
+        right: 26,
+        top: 30,
+        bottom: 66
+      };
+
+      const allPoints = seriesData.flatMap(s => s.points);
+
+      if (!allPoints.length) {
+        ctx.font = "16px Arial";
+        ctx.fillStyle = "#6b7280";
+        ctx.fillText("Tidak ada data time series yang tersedia.", 70, 80);
+        return;
+      }
+
+      const minTime = Math.min(...allPoints.map(p => p.time.getTime()));
+      const maxTime = Math.max(...allPoints.map(p => p.time.getTime()));
+      const minValue = Math.min(...allPoints.map(p => p.value));
+      const maxValue = Math.max(...allPoints.map(p => p.value));
+
+      const yMin = minValue === maxValue ? minValue - 1 : minValue - (maxValue - minValue) * 0.12;
+      const yMax = minValue === maxValue ? maxValue + 1 : maxValue + (maxValue - minValue) * 0.12;
+
+      const chartW = width - padding.left - padding.right;
+      const chartH = height - padding.top - padding.bottom;
+
+      function xScale(time) {
+        if (maxTime === minTime) return padding.left;
+        return padding.left + ((time - minTime) / (maxTime - minTime)) * chartW;
+      }
+
+      function yScale(value) {
+        return padding.top + (1 - ((value - yMin) / (yMax - yMin))) * chartH;
+      }
+
+      ctx.strokeStyle = "#e5e7eb";
+      ctx.lineWidth = 1;
+
+      for (let i = 0; i <= 5; i++) {
+        const y = padding.top + (chartH / 5) * i;
+        ctx.beginPath();
+        ctx.moveTo(padding.left, y);
+        ctx.lineTo(width - padding.right, y);
+        ctx.stroke();
+
+        const value = yMax - ((yMax - yMin) / 5) * i;
+        ctx.fillStyle = "#6b7280";
+        ctx.font = "12px Arial";
+        ctx.fillText(value.toFixed(1) + " " + unit, 10, y + 4);
+      }
+
+      ctx.strokeStyle = "#d1d5db";
+      ctx.beginPath();
+      ctx.moveTo(padding.left, padding.top);
+      ctx.lineTo(padding.left, height - padding.bottom);
+      ctx.lineTo(width - padding.right, height - padding.bottom);
+      ctx.stroke();
+
+      seriesData.forEach((series, index) => {
+        if (!series.points.length) return;
+
+        ctx.strokeStyle = colors[index % colors.length];
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+
+        series.points.forEach((point, idx) => {
+          const x = xScale(point.time.getTime());
+          const y = yScale(point.value);
+
+          if (idx === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+
+        ctx.stroke();
+
+        series.points.forEach(point => {
+          const x = xScale(point.time.getTime());
+          const y = yScale(point.value);
+
+          ctx.beginPath();
+          ctx.arc(x, y, 3.2, 0, Math.PI * 2);
+          ctx.fillStyle = colors[index % colors.length];
+          ctx.fill();
+        });
+      });
+
+      const tickCount = 4;
+      ctx.fillStyle = "#6b7280";
+      ctx.font = "12px Arial";
+
+      for (let i = 0; i <= tickCount; i++) {
+        const time = new Date(minTime + ((maxTime - minTime) / tickCount) * i);
+        const x = xScale(time.getTime());
+        const label = formatDateLabel(time);
+
+        ctx.save();
+        ctx.translate(x - 8, height - 38);
+        ctx.rotate(-0.35);
+        ctx.fillText(label, 0, 0);
+        ctx.restore();
+      }
+
+      ctx.fillStyle = "#111827";
+      ctx.font = "bold 15px Arial";
+      ctx.fillText(metricLabel + " (" + unit + ")", padding.left, 20);
+    }
+
+    function renderDeviceGrid(deviceResults) {
+      const grid = document.getElementById("deviceGrid");
+
+      grid.innerHTML = deviceResults.map(item => {
+        if (item.error) {
+          return `
+            <div class="device">
+              <div class="device-name">Device ${item.id}</div>
+              <div class="small">Gagal memuat metadata.</div>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="device">
+            <div class="device-name">${item.name}</div>
+            <div class="small">
+              Device ID: ${item.id}<br>
+              Status: ${item.state}<br>
+              Sensor ${item.metricName}: ${item.sensorName || "-"}<br>
+              Sensor ID: ${item.sensorId || "-"}
+            </div>
+            <span class="badge">${item.points} titik data</span>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderLegend(seriesData) {
+      const legend = document.getElementById("legend");
+
+      legend.innerHTML = seriesData.map((s, i) => `
+        <div>
+          <span class="dot" style="background:${colors[i % colors.length]}"></span>
+          ${s.label}
+        </div>
+      `).join("");
+    }
+
+    function renderAnalysis(seriesData, metricLabel, unit) {
+      const box = document.getElementById("analysis");
+
+      const rows = seriesData.map(s => {
+        const values = s.points.map(p => p.value);
+
+        if (!values.length) {
+          return `${s.label}: tidak ada data yang berhasil dibaca.`;
+        }
+
+        const avg = values.reduce((a, b) => a + b, 0) / values.length;
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        const latest = values[values.length - 1];
+
+        return `
+          <strong>${s.label}</strong><br>
+          Rata-rata ${metricLabel}: ${avg.toFixed(2)} ${unit}. 
+          Minimum: ${min.toFixed(2)} ${unit}. 
+          Maksimum: ${max.toFixed(2)} ${unit}. 
+          Nilai terakhir: ${latest.toFixed(2)} ${unit}.<br><br>
+        `;
+      }).join("");
+
+      box.innerHTML = rows;
+    }
+
+    async function loadDashboard() {
+      const metric = document.getElementById("metricSelect").value;
+      const rollup = document.getElementById("rollupSelect").value;
+      const { from, to } = getDateRange();
+
+      const metricLabel = metric === "temperature" ? "Air Temperature" : "Relative Humidity";
+      const unit = metric === "temperature" ? "°C" : "%";
+
+      document.getElementById("chartTitle").innerText =
+        metricLabel + " - 3 Device Smart Citizen";
+
+      document.getElementById("statusMessage").className = "message";
+      document.getElementById("statusMessage").innerText =
+        "Mengambil metadata device dan data time series...";
+
+      const seriesData = [];
+      const deviceResults = [];
+
+      for (let i = 0; i < devices.length; i++) {
+        const deviceId = devices[i].id;
+
+        try {
+          const metadata = await fetchDeviceMetadata(deviceId);
+          const sensors = getSensors(metadata);
+          const selectedSensor = findSensorByMetric(sensors, metric);
+
+          if (!selectedSensor) {
+            deviceResults.push({
+              id: deviceId,
+              name: metadata.name || "Device " + deviceId,
+              state: metadata.state || "-",
+              metricName: metricLabel,
+              sensorName: null,
+              sensorId: null,
+              points: 0
+            });
+            continue;
+          }
+
+          const readingsJson = await fetchReadings(
+            deviceId,
+            selectedSensor.id,
+            rollup,
+            from,
+            to
+          );
+
+          const points = normalizeReadings(readingsJson);
+
+          seriesData.push({
+            label: metadata.name || "Device " + deviceId,
+            points
+          });
+
+          deviceResults.push({
+            id: deviceId,
+            name: metadata.name || "Device " + deviceId,
+            state: metadata.state || "-",
+            metricName: metricLabel,
+            sensorName: selectedSensor.name,
+            sensorId: selectedSensor.id,
+            points: points.length
+          });
+
+        } catch (error) {
+          console.error(error);
+
+          deviceResults.push({
+            id: deviceId,
+            error: true
+          });
+        }
+      }
+
+      renderDeviceGrid(deviceResults);
+      renderLegend(seriesData);
+      drawLineChart(seriesData, metricLabel, unit);
+      renderAnalysis(seriesData, metricLabel, unit);
+
+      document.getElementById("statusMessage").innerText =
+        "Data berhasil diproses. Jika chart kosong, kemungkinan endpoint readings tidak mengembalikan data untuk rentang waktu tersebut.";
+    }
+
+    loadDashboard();
+  </script>
+</body>
+</html>
