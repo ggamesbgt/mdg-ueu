@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Risiko Lingkungan Smart Citizen</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f9;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: auto;
+    }
+
+    h1 {
+      color: #0056b3;
+      margin-bottom: 5px;
+    }
+
+    .subtitle {
+      color: #666;
+      margin-bottom: 24px;
+    }
+
+    .device-card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+
+    .device-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 12px;
+      margin-bottom: 16px;
+    }
+
+    .device-name {
+      font-size: 22px;
+      font-weight: bold;
+      color: #111;
+    }
+
+    .device-id {
+      color: #666;
+      font-size: 14px;
+      margin-top: 4px;
+    }
+
+    .status {
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: bold;
+      height: fit-content;
+    }
+
+    .online {
+      background: #e6f4ea;
+      color: #137333;
+    }
+
+    .offline {
+      background: #fce8e6;
+      color: #c5221f;
+    }
+
+    .sensor-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .sensor-box {
+      background: #f8f9fa;
+      border-radius: 10px;
+      padding: 16px;
+    }
+
+    .sensor-label {
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 6px;
+    }
+
+    .sensor-value {
+      font-size: 28px;
+      font-weight: bold;
+      color: #111;
+    }
+
+    .risk-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .risk-box {
+      border-radius: 10px;
+      padding: 16px;
+      font-weight: bold;
+    }
+
+    .risk-title {
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+
+    .risk-desc {
+      font-size: 14px;
+      font-weight: normal;
+      line-height: 1.5;
+    }
+
+    .high {
+      background: #fce8e6;
+      color: #c5221f;
+    }
+
+    .medium {
+      background: #fff4ce;
+      color: #8a6d00;
+    }
+
+    .low {
+      background: #e6f4ea;
+      color: #137333;
+    }
+
+    .meta {
+      color: #666;
+      font-size: 14px;
+      margin-top: 12px;
+    }
+
+    .note {
+      background: #fff;
+      border-left: 5px solid #0056b3;
+      padding: 16px;
+      border-radius: 8px;
+      margin-top: 24px;
+      color: #444;
+      font-size: 14px;
+    }
+
+    .error {
+      color: #c5221f;
+      font-weight: bold;
+      padding: 16px;
+      background: #fce8e6;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Dashboard Risiko Lingkungan</h1>
+    <p class="subtitle">
+      Identifikasi potensi Dengue Mosquito Habitat dan Mold & Respiratory Health berdasarkan data suhu dan kelembapan.
+    </p>
+
+    <div id="dashboard">
+      Memuat data perangkat...
+    </div>
+
+    <div class="note">
+      <strong>Catatan:</strong> Dashboard ini bukan alat diagnosis medis atau sistem peringatan resmi.
+      Klasifikasi hanya menggunakan indikator dasar suhu dan kelembapan dari sensor.
+    </div>
+  </div>
+
+  <script>
+    const devices = [
+      { id: 19686 },
+      { id: 19684 },
+      { id: 19682 }
+    ];
+
+    async function fetchDeviceData(deviceId) {
+      const apiUrl = `https://api.smartcitizen.me/v0/devices/${deviceId}`;
+      const response = await fetch(apiUrl);
+
+      if (!response.ok) {
+        throw new Error(`Gagal mengambil data device ${deviceId}`);
+      }
+
+      return await response.json();
+    }
+
+    function getSensorValue(sensors, keywords) {
+      for (const sensor of sensors) {
+        const name = (sensor.name || "").toLowerCase();
+        const description = (sensor.description || "").toLowerCase();
+        const unit = (sensor.unit || "").toLowerCase();
+
+        for (const keyword of keywords) {
+          if (
+            name.includes(keyword) ||
+            description.includes(keyword) ||
+            unit.includes(keyword)
+          ) {
+            return sensor.value;
+          }
+        }
+      }
+
+      return null;
+    }
+
+    function getDengueRisk(temp, rh) {
+      if (temp === null || rh === null) {
+        return {
+          level: "DATA TIDAK LENGKAP",
+          className: "medium",
+          description: "Data suhu atau kelembapan belum tersedia untuk menilai potensi habitat nyamuk dengue."
+        };
+      }
+
+      if (temp >= 25 && temp <= 30 && rh > 70) {
+        return {
+          level: "TINGGI",
+          className: "high",
+          description: "Kondisi suhu dan kelembapan berada pada rentang optimal bagi Aedes aegypti."
+        };
+      }
+
+      if (temp >= 24 && temp <= 32 && rh >= 60) {
+        return {
+          level: "SEDANG",
+          className: "medium",
+          description: "Kondisi lingkungan cukup mendukung, tetapi tidak sepenuhnya berada pada rentang optimal."
+        };
+      }
+
+      return {
+        level: "RENDAH",
+        className: "low",
+        description: "Kondisi suhu dan kelembapan kurang mendukung sebagai habitat optimal nyamuk dengue."
+      };
+    }
+
+    function getMoldRisk(temp, rh) {
+      if (temp === null || rh === null) {
+        return {
+          level: "DATA TIDAK LENGKAP",
+          className: "medium",
+          description: "Data suhu atau kelembapan belum tersedia untuk menilai potensi pertumbuhan mold."
+        };
+      }
+
+      if (temp >= 20 && temp <= 30 && rh > 60) {
+        return {
+          level: "TINGGI",
+          className: "high",
+          description: "Kondisi kelembapan dan suhu mendukung pertumbuhan mold yang dapat memicu gangguan pernapasan."
+        };
+      }
+
+      if (temp >= 18 && temp <= 32 && rh >= 55) {
+        return {
+          level: "SEDANG",
+          className: "medium",
+          description: "Kondisi cukup lembap dan perlu dipantau, terutama pada ruang dengan ventilasi rendah."
+        };
+      }
+
+      return {
+        level: "RENDAH",
+        className: "low",
+        description: "Kondisi relatif kurang mendukung untuk pertumbuhan mold."
+      };
+    }
+
+    function getRecommendation(dengueRisk, moldRisk, rh) {
+      let recommendations = [];
+
+      if (dengueRisk.level === "TINGGI") {
+        recommendations.push("Periksa dan bersihkan genangan air, tempat penampungan air, pot tanaman, dan saluran yang tersumbat.");
+      }
+
+      if (moldRisk.level === "TINGGI") {
+        recommendations.push("Tingkatkan ventilasi, buka jendela saat kelembapan turun, atau gunakan dehumidifier.");
+      }
+
+      if (rh !== null && rh > 70) {
+        recommendations.push("Kelembapan tinggi terdeteksi. Pantau ruangan tertutup dan area yang kurang sirkulasi udara.");
+      }
+
+      if (recommendations.length === 0) {
+        recommendations.push("Kondisi relatif aman, tetapi pemantauan berkala tetap disarankan.");
+      }
+
+      return recommendations.join(" ");
+    }
+
+    function renderDeviceCard(data, deviceId) {
+      const sensors = data.data && data.data.sensors ? data.data.sensors : [];
+
+      const temperature = getSensorValue(sensors, [
+        "temperature",
+        "temp",
+        "ºc",
+        "°c"
+      ]);
+
+      const humidity = getSensorValue(sensors, [
+        "humidity",
+        "relative humidity",
+        "%"
+      ]);
+
+      const dengueRisk = getDengueRisk(temperature, humidity);
+      const moldRisk = getMoldRisk(temperature, humidity);
+      const recommendation = getRecommendation(dengueRisk, moldRisk, humidity);
+
+      const deviceName = data.name || `Device ${deviceId}`;
+      const state = data.state || "unknown";
+      const isOnline = state === "online" || state === "has_published";
+
+      const lastUpdate = data.last_recorded_at
+        ? new Date(data.last_recorded_at).toLocaleString("id-ID")
+        : "-";
+
+      return `
+        <div class="device-card">
+          <div class="device-header">
+            <div>
+              <div class="device-name">${deviceName}</div>
+              <div class="device-id">Device ID: ${deviceId}</div>
+            </div>
+            <div class="status ${isOnline ? "online" : "offline"}">
+              ${isOnline ? "ONLINE" : "OFFLINE"}
+            </div>
+          </div>
+
+          <div class="sensor-grid">
+            <div class="sensor-box">
+              <div class="sensor-label">Suhu</div>
+              <div class="sensor-value">
+                ${temperature !== null ? Number(temperature).toFixed(2) + " °C" : "-"}
+              </div>
+            </div>
+
+            <div class="sensor-box">
+              <div class="sensor-label">Kelembapan Relatif</div>
+              <div class="sensor-value">
+                ${humidity !== null ? Number(humidity).toFixed(2) + " %" : "-"}
+              </div>
+            </div>
+          </div>
+
+          <div class="risk-grid">
+            <div class="risk-box ${dengueRisk.className}">
+              <div class="risk-title">Dengue Mosquito Habitat: ${dengueRisk.level}</div>
+              <div class="risk-desc">${dengueRisk.description}</div>
+            </div>
+
+            <div class="risk-box ${moldRisk.className}">
+              <div class="risk-title">Mold & Respiratory Health: ${moldRisk.level}</div>
+              <div class="risk-desc">${moldRisk.description}</div>
+            </div>
+          </div>
+
+          <div class="meta">
+            <strong>Rekomendasi:</strong> ${recommendation}
+          </div>
+
+          <div class="meta">
+            <strong>Update terakhir:</strong> ${lastUpdate}
+          </div>
+        </div>
+      `;
+    }
+
+    async function loadDashboard() {
+      const dashboard = document.getElementById("dashboard");
+      dashboard.innerHTML = "Memuat data perangkat...";
+
+      let html = "";
+
+      for (const device of devices) {
+        try {
+          const data = await fetchDeviceData(device.id);
+          html += renderDeviceCard(data, device.id);
+        } catch (error) {
+          console.error(error);
+          html += `
+            <div class="device-card">
+              <div class="device-name">Device ${device.id}</div>
+              <div class="error">
+                Gagal memuat data perangkat ini. Periksa koneksi atau akses API.
+              </div>
+            </div>
+          `;
+        }
+      }
+
+      dashboard.innerHTML = html;
+    }
+
+    loadDashboard();
+
+    setInterval(loadDashboard, 300000);
+  </script>
+</body>
+</html>
