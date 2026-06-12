@@ -155,14 +155,13 @@
         @media (max-width: 600px) {
             body { padding: 12px; }
             th, td { padding: 12px; }
-            th:nth-child(4), td:nth-child(4) { display: none; } /* Sembunyikan deskripsi di HP agar muat */
+            th:nth-child(4), td:nth-child(4) { display: none; }
         }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <!-- Kartu Informasi Perangkat -->
         <div class="header-card">
             <h1 id="dev-name">Menghubungkan ke API...</h1>
             <div class="meta-grid">
@@ -172,7 +171,6 @@
             </div>
         </div>
 
-        <!-- Wadah Tabel Data -->
         <div class="table-container">
             <table>
                 <thead>
@@ -194,15 +192,15 @@
 
     <script>
         const deviceId = '19684';
-        const rawApiUrl = `https://smartcitizen.me{deviceId}`;
+        const targetUrl = `https://smartcitizen.me{deviceId}`;
         
-        // Memakai corsproxy.io untuk menembus proteksi keamanan browser di GitHub Pages
-        const secureProxyUrl = `https://corsproxy.io{encodeURIComponent(rawApiUrl)}`;
+        // Memakai proxy bypass alternatif yang didukung penuh oleh Cloudflare Worker gratis
+        const proxyUrl = `https://allorigins.win{encodeURIComponent(targetUrl)}`;
 
         function fetchSensorData() {
-            fetch(secureProxyUrl)
+            fetch(proxyUrl)
                 .then(response => {
-                    if (!response.ok) throw new Error('Gagal merespon data jaringan');
+                    if (!response.ok) throw new Error('Proxy Gagal Merespon');
                     return response.json();
                 })
                 .then(data => {
@@ -211,13 +209,23 @@
                 })
                 .catch(error => {
                     console.error('Error saat fetch data:', error);
-                    document.getElementById('sensor-table-body').innerHTML = `
-                        <tr>
-                            <td colspan="4" class="error-state">
-                                ⚠️ Gagal memuat data. Server Smart Citizen sibuk atau terjadi pembatasan browser.
-                            </td>
-                        </tr>
-                    `;
+                    
+                    // JALUR DARURAT: Jika proxy pertama gagal, coba tembak langsung tanpa proxy (beberapa browser modern mengizinkannya)
+                    fetch(targetUrl)
+                        .then(res => res.json())
+                        .then(data => {
+                            updateMetadata(data);
+                            renderTableRows(data);
+                        })
+                        .catch(() => {
+                            document.getElementById('sensor-table-body').innerHTML = `
+                                <tr>
+                                    <td colspan="4" class="error-state">
+                                        ⚠️ Gagal memuat data otomatis. Silakan coba muat ulang halaman (Refresh) browser Anda.
+                                    </td>
+                                </tr>
+                            `;
+                        });
                 });
         }
 
@@ -240,9 +248,8 @@
 
         function renderTableRows(json) {
             const tableBody = document.getElementById('sensor-table-body');
-            tableBody.innerHTML = ''; // Bersihkan teks loading
+            tableBody.innerHTML = ''; 
 
-            // Deteksi penempatan array sensor pada struktur JSON
             const sensors = (json.data && json.data.sensors) ? json.data.sensors : (json.sensors || []);
 
             if (sensors.length === 0) {
@@ -252,11 +259,7 @@
 
             sensors.forEach(sensor => {
                 const row = document.createElement('tr');
-                
-                // Format pembulatan angka desimal agar serasi dengan UI aslinya (maksimal 2 angka di belakang koma)
                 const valueFormatted = typeof sensor.value === 'number' ? sensor.value.toFixed(2) : (sensor.value ?? '-');
-                
-                // Ambil deskripsi fungsional variabel dari objek measurement
                 const descriptionText = (sensor.measurement && sensor.measurement.description) 
                     ? sensor.measurement.description 
                     : (sensor.description || '-');
@@ -275,7 +278,6 @@
             });
         }
 
-        // Jalankan program otomasi ketika struktur web selesai di-load browser
         document.addEventListener('DOMContentLoaded', fetchSensorData);
     </script>
 </body>
