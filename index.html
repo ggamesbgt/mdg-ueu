@@ -3,142 +3,280 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Citizen Dashboard - ID 19684</title>
+    <title>Dasbor Sensor VS_KBNJERUK</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; margin: 20px; background-color: #f4f6f9; color: #333; }
-        .container { max-width: 900px; margin: 0 auto; }
-        .device-info { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 24px; border: 1px solid #e1e4e8; }
-        .device-info h2 { margin-top: 0; color: #0056b3; font-size: 1.5rem; }
-        .status-online { background: #e6f4ea; color: #137333; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85rem; }
-        .status-offline { background: #fce8e6; color: #c5221f; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85rem; }
-        p { margin: 8px 0; font-size: 0.95rem; }
-        table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e1e4e8; table-layout: fixed; }
-        th, td { padding: 14px 16px; text-align: left; border-bottom: 1px solid #f0f2f5; word-wrap: break-word; }
-        th { background-color: #0056b3; color: white; font-weight: 600; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.5px; }
-        tr:last-child td { border-bottom: none; }
-        tr:hover { background-color: #f8f9fa; }
-        .loading { font-style: italic; color: #666; text-align: center; padding: 30px; }
-        .sensor-desc { font-size: 0.85rem; color: #666; margin-top: 4px; font-weight: normal; display: block; }
+        :root {
+            --primary: #0056b3;
+            --bg: #f4f6f9;
+            --card-bg: #ffffff;
+            --text: #333333;
+            --text-muted: #666666;
+            --border: #e1e4e8;
+            --success: #137333;
+            --success-bg: #e6f4ea;
+            --error: #c5221f;
+            --error-bg: #fce8e6;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 850px;
+            margin: 0 auto;
+        }
+
+        .header-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        .header-card h1 {
+            margin: 0 0 12px 0;
+            color: var(--primary);
+            font-size: 1.6rem;
+            font-weight: 700;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            font-size: 0.95rem;
+        }
+
+        .meta-item strong {
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            letter-spacing: 0.5px;
+        }
+
+        .status-online { background-color: var(--success-bg); color: var(--success); }
+        .status-offline { background-color: var(--error-bg); color: var(--error); }
+
+        .table-container {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            background-color: #fafbfc;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            padding: 14px 16px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        td {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.95rem;
+            vertical-align: top;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background-color: #f8f9fa;
+        }
+
+        .sensor-name {
+            font-weight: 600;
+            color: #111;
+        }
+
+        .sensor-id {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+            font-weight: 400;
+        }
+
+        .sensor-value {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: #000;
+        }
+
+        .sensor-unit {
+            background-color: #f1f3f5;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .loading-state, .error-state {
+            text-align: center;
+            padding: 40px;
+            font-style: italic;
+            color: var(--text-muted);
+        }
+
+        .error-state {
+            color: var(--error);
+            font-weight: 500;
+        }
+
+        @media (max-width: 600px) {
+            body { padding: 12px; }
+            th, td { padding: 12px; }
+            th:nth-child(4), td:nth-child(4) { display: none; } /* Sembunyikan deskripsi di HP agar muat */
+        }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <div class="device-info">
-            <h2 id="dev-name">Memuat Data Perangkat...</h2>
-            <p><strong>Status:</strong> <span id="dev-state">-</span></p>
-            <p><strong>Pembaruan Terakhir:</strong> <span id="dev-time">-</span></p>
+        <!-- Kartu Informasi Perangkat -->
+        <div class="header-card">
+            <h1 id="dev-name">Menghubungkan ke API...</h1>
+            <div class="meta-grid">
+                <div class="meta-item"><strong>Status:</strong> <span id="dev-state" class="status-badge">-</span></div>
+                <div class="meta-item"><strong>Pemilik:</strong> <span id="dev-owner">-</span></div>
+                <div class="meta-item"><strong>Update:</strong> <span id="dev-time">-</span></div>
+            </div>
         </div>
 
-        <table>
-            <colgroup>
-                <col style="width: 35%;">
-                <col style="width: 15%;">
-                <col style="width: 15%;">
-                <col style="width: 35%;">
-            </colgroup>
-            <thead>
-                <tr>
-                    <th>Nama Sensor</th>
-                    <th>Nilai</th>
-                    <th>Satuan</th>
-                    <th>Deskripsi Variabel (Measurement)</th>
-                </tr>
-            </thead>
-            <tbody id="sensor-table-body">
-                <tr>
-                    <td colspan="4" class="loading">Sedang mengambil data sensor real-time...</td>
-                </tr>
-            </tbody>
-        </table>
+        <!-- Wadah Tabel Data -->
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 30%;">Nama Sensor</th>
+                        <th style="width: 15%;">Nilai</th>
+                        <th style="width: 15%;">Satuan</th>
+                        <th style="width: 40%;">Keterangan Metrik</th>
+                    </tr>
+                </thead>
+                <tbody id="sensor-table-body">
+                    <tr>
+                        <td colspan="4" class="loading-state">Sedang memproses data sensor real-time...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <script>
-        // Menggunakan alur fallback multi-proxy untuk memastikan CORS tertembus dari GitHub Pages
-        const rawApiUrl = 'https://smartcitizen.me';
-        const proxyUrl1 = `https://corsproxy.io{encodeURIComponent(rawApiUrl)}`;
-        const proxyUrl2 = `https://allorigins.win{encodeURIComponent(rawApiUrl)}`;
+        const deviceId = '19684';
+        const rawApiUrl = `https://smartcitizen.me{deviceId}`;
+        
+        // Memakai corsproxy.io untuk menembus proteksi keamanan browser di GitHub Pages
+        const secureProxyUrl = `https://corsproxy.io{encodeURIComponent(rawApiUrl)}`;
 
-        function loadDashboard() {
-            // Pertama, coba gunakan corsproxy.io yang paling stabil
-            fetch(proxyUrl1)
-                .then(res => { if (!res.ok) throw new Error(); return res.json(); })
-                .then(json => renderData(json))
-                .catch(() => {
-                    console.warn("Gagal memuat lewat proxy utama, mencoba proxy cadangan...");
-                    // Kedua, coba gunakan allorigins jika proxy pertama gagal
-                    fetch(proxyUrl2)
-                        .then(res => { if (!res.ok) throw new Error(); return res.json(); })
-                        .then(json => renderData(json))
-                        .catch(err => {
-                            console.error("Semua koneksi gagal", err);
-                            document.getElementById('sensor-table-body').innerHTML = 
-                                `<tr><td colspan="4" style="color:red; text-align:center; padding:20px;">
-                                Gagal memuat data dari API. Server Smart Citizen sedang sibuk atau ID perangkat tidak valid.
-                                </td></tr>`;
-                        });
+        function fetchSensorData() {
+            fetch(secureProxyUrl)
+                .then(response => {
+                    if (!response.ok) throw new Error('Gagal merespon data jaringan');
+                    return response.json();
+                })
+                .then(data => {
+                    updateMetadata(data);
+                    renderTableRows(data);
+                })
+                .catch(error => {
+                    console.error('Error saat fetch data:', error);
+                    document.getElementById('sensor-table-body').innerHTML = `
+                        <tr>
+                            <td colspan="4" class="error-state">
+                                ⚠️ Gagal memuat data. Server Smart Citizen sibuk atau terjadi pembatasan browser.
+                            </td>
+                        </tr>
+                    `;
                 });
         }
 
-        function renderData(json) {
-            // 1. Isi Metadata Perangkat sesuai skema API
-            document.getElementById('dev-name').innerText = json.name || "Smart Citizen Device (ID 19684)";
+        function updateMetadata(json) {
+            document.getElementById('dev-name').innerText = json.name || `Perangkat #${deviceId}`;
+            document.getElementById('dev-owner').innerText = (json.owner && json.owner.username) ? json.owner.username : 'Vina Sandriana';
             
             const stateEl = document.getElementById('dev-state');
             const isOnline = json.state === 'online' || json.state === 'has_published';
-            stateEl.innerText = json.state ? json.state.toUpperCase() : 'UNKNOWN';
-            stateEl.className = isOnline ? 'status-online' : 'status-offline';
+            stateEl.innerText = isOnline ? 'ONLINE' : 'OFFLINE';
+            stateEl.className = `status-badge ${isOnline ? 'status-online' : 'status-offline'}`;
             
             if (json.last_recorded_at) {
                 const lastUpdate = new Date(json.last_recorded_at);
                 document.getElementById('dev-time').innerText = lastUpdate.toLocaleString('id-ID');
             } else {
-                document.getElementById('dev-time').innerText = "Tidak ada rekaman waktu baru";
-            }
-
-            // 2. Isi Tabel Sensor & Ekstraksi Measurement Objek sesuai artikel dokumentasi
-            const tableBody = document.getElementById('sensor-table-body');
-            tableBody.innerHTML = ''; 
-
-            const sensors = (json.data && json.data.sensors) ? json.data.sensors : (json.sensors || []);
-
-            if (sensors.length > 0) {
-                sensors.forEach(sensor => {
-                    const row = document.createElement('tr');
-                    
-                    // Format Nilai Angka
-                    const valueFormatted = typeof sensor.value === 'number' ? sensor.value.toFixed(2) : (sensor.value ?? '-');
-                    
-                    // Ekstraksi info dari properti 'measurement' atau 'description' bawaan skema sensor
-                    let measurementDesc = "-";
-                    if (sensor.measurement && sensor.measurement.description) {
-                        measurementDesc = sensor.measurement.description;
-                    } else if (sensor.description) {
-                        measurementDesc = sensor.description;
-                    }
-
-                    // Tentukan tanda label jika sensor merupakan sub-sensor (punya parent_id)
-                    const sensorNamePrefix = sensor.parent_id ? `↳ ${sensor.name}` : sensor.name;
-
-                    row.innerHTML = `
-                        <td>
-                            <strong>${sensorNamePrefix || 'Sensor'}</strong>
-                            <span class="sensor-desc">ID Sensor: ${sensor.id || '-'}</span>
-                        </td>
-                        <td>${valueFormatted}</td>
-                        <td><code>${sensor.unit || '-'}</code></td>
-                        <td style="font-size: 0.9rem; color: #555;">${measurementDesc}</td>
-                    `;
-                    tableBody.appendChild(row);
-                });
-            } else {
-                tableBody.innerHTML = '<tr><td colspan="4" class="loading">Data komponen daftar sensor kosong saat ini.</td></tr>';
+                document.getElementById('dev-time').innerText = '-';
             }
         }
 
-        // Jalankan pemanggilan data otomatis saat halaman selesai dimuat
-        window.onload = loadDashboard;
-    </script>
+        function renderTableRows(json) {
+            const tableBody = document.getElementById('sensor-table-body');
+            tableBody.innerHTML = ''; // Bersihkan teks loading
 
+            // Deteksi penempatan array sensor pada struktur JSON
+            const sensors = (json.data && json.data.sensors) ? json.data.sensors : (json.sensors || []);
+
+            if (sensors.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="4" class="loading-state">Tidak ada komponen sensor aktif ditemukan.</td></tr>';
+                return;
+            }
+
+            sensors.forEach(sensor => {
+                const row = document.createElement('tr');
+                
+                // Format pembulatan angka desimal agar serasi dengan UI aslinya (maksimal 2 angka di belakang koma)
+                const valueFormatted = typeof sensor.value === 'number' ? sensor.value.toFixed(2) : (sensor.value ?? '-');
+                
+                // Ambil deskripsi fungsional variabel dari objek measurement
+                const descriptionText = (sensor.measurement && sensor.measurement.description) 
+                    ? sensor.measurement.description 
+                    : (sensor.description || '-');
+
+                row.innerHTML = `
+                    <td>
+                        <span class="sensor-name">${sensor.name || 'Sensor'}</span>
+                        <span class="sensor-id">ID: ${sensor.id || '-'}</span>
+                    </td>
+                    <td><span class="sensor-value">${valueFormatted}</span></td>
+                    <td><span class="sensor-unit">${sensor.unit || '-'}</span></td>
+                    <td style="color: var(--text-muted); font-size: 0.88rem;">${descriptionText}</td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Jalankan program otomasi ketika struktur web selesai di-load browser
+        document.addEventListener('DOMContentLoaded', fetchSensorData);
+    </script>
 </body>
 </html>
