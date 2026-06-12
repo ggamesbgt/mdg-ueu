@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bayu Indoor BME680 Dashboard</title>
+
+  <style>
+    :root {
+      --bg: #f8fafd;
+      --card: #ffffff;
+      --primary: #0066ff;
+      --green: #10b981;
+      --yellow: #f59e0b;
+      --red: #ef4444;
+      --text: #111827;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --soft-blue: #eaf2ff;
+      --soft-green: #ecfdf5;
+      --soft-yellow: #fff7ed;
+      --soft-red: #fef2f2;
+      --shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+      --radius: 22px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at top left, rgba(0, 102, 255, 0.10), transparent 34%),
+        radial-gradient(circle at top right, rgba(16, 185, 129, 0.10), transparent 30%),
+        var(--bg);
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      color: var(--text);
+    }
+
+    .page {
+      width: min(1180px, calc(100% - 28px));
+      margin: auto;
+      padding: 28px 0 56px;
+    }
+
+    .hero,
+    .card {
+      background: rgba(255, 255, 255, 0.86);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(229, 231, 235, 0.85);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+      margin-bottom: 22px;
+    }
+
+    .hero-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .eyebrow {
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(30px, 5vw, 52px);
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+    }
+
+    h2 {
+      margin: 0 0 18px;
+      font-size: 22px;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      margin: 14px 0 0;
+      max-width: 760px;
+      color: var(--muted);
+      line-height: 1.65;
+      font-size: 15px;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      height: fit-content;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: var(--soft-green);
+      color: #047857;
+      font-weight: 900;
+      font-size: 13px;
+    }
+
+    .status.offline {
+      background: var(--soft-red);
+      color: #b91c1c;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 1.4s infinite;
+    }
+
+    .offline .dot {
+      background: var(--red);
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(16,185,129,.55); }
+      70% { box-shadow: 0 0 0 9px rgba(16,185,129,0); }
+      100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 24px;
+    }
+
+    .meta {
+      background: #f9fbff;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 16px;
+    }
+
+    .meta-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 7px;
+    }
+
+    .meta-value {
+      font-size: 15px;
+      font-weight: 900;
+      word-break: break-word;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    .kpi {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      min-height: 150px;
+    }
+
+    .kpi-icon {
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border-radius: 15px;
+      background: var(--soft-blue);
+      color: var(--primary);
+      font-size: 23px;
+      margin-bottom: 16px;
+    }
+
+    .kpi-title {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+    }
+
+    .kpi-value {
+      margin-top: 8px;
+      font-size: 30px;
+      font-weight: 950;
+      letter-spacing: -0.04em;
+    }
+
+    .kpi-unit {
+      font-size: 14px;
+      color: var(--muted);
+      font-weight: 800;
+      margin-left: 3px;
+    }
+
+    .risk-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .risk {
+      border-radius: var(--radius);
+      padding: 20px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+
+    .risk h3 {
+      margin: 0 0 10px;
+      font-size: 16px;
+    }
+
+    .level {
+      display: inline-block;
+      padding: 7px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 900;
+      margin-bottom: 12px;
+    }
+
+    .normal .level {
+      background: var(--soft-green);
+      color: #047857;
+    }
+
+    .watch .level {
+      background: var(--soft-yellow);
+      color: #b45309;
+    }
+
+    .problem .level {
+      background: var(--soft-red);
+      color: #b91c1c;
+    }
+
+    .risk p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 14px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 760px;
+      background: white;
+    }
+
+    th {
+      background: #f9fafb;
+      color: var(--muted);
+      text-align: left;
+      padding: 14px 18px;
+      font-size: 12px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    td {
+      padding: 16px 18px;
+      border-top: 1px solid var(--border);
+      vertical-align: top;
+      font-size: 14px;
+    }
+
+    .sensor-name {
+      font-weight: 900;
+    }
+
+    .sensor-value {
+      font-family: Consolas, Monaco, monospace;
+      font-weight: 900;
+    }
+
+    .badge {
+      display: inline-block;
+      background: #f3f4f6;
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: 12px;
+      font-weight: 800;
+      color: #374151;
+    }
+
+    .desc {
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .message {
+      padding: 16px;
+      border-radius: 16px;
+      background: var(--soft-yellow);
+      color: #92400e;
+      font-weight: 800;
+      line-height: 1.55;
+    }
+
+    .message.error {
+      background: var(--soft-red);
+      color: #991b1b;
+    }
+
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+      margin-top: 24px;
+    }
+
+    @media (max-width: 980px) {
+      .kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .risk-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .meta-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 560px) {
+      .page {
+        width: min(100% - 20px, 1180px);
+        padding-top: 14px;
+      }
+
+      .hero,
+      .card,
+      .kpi,
+      .risk {
+        border-radius: 18px;
+        padding: 18px;
+      }
+
+      .kpi-grid,
+      .meta-grid {
+        grid-template-columns: 1fr;
+      }
+
+      table {
+        min-width: 0;
+      }
+
+      th:nth-child(4),
+      td:nth-child(4) {
+        display: none;
+      }
+
+      th,
+      td {
+        padding: 13px 10px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="page">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="eyebrow">Kabupaten Tangerang · Bayu Indoor BME680</div>
+          <h1 id="deviceName">Indoor Environmental Dashboard</h1>
+          <p class="subtitle">
+            Dashboard ini membaca sinyal BME680: suhu, kelembapan relatif,
+            tekanan udara, gas resistance, dan IAQ/air-freshness index. Interpretasi
+            risiko difokuskan pada rumah tropis: lembap, panas, mold, dust mite,
+            dengue suitability, dan kualitas kesegaran udara.
+          </p>
+        </div>
+
+        <div id="statusBadge" class="status">
+          <span class="dot"></span>
+          <span id="deviceStatus">CONNECTING</span>
+        </div>
+      </div>
+
+      <div class="meta-grid">
+        <div class="meta">
+          <div class="meta-label">Device ID</div>
+          <div id="deviceIdText" class="meta-value">19684</div>
+        </div>
+        <div class="meta">
+          <div class="meta-label">Pemilik</div>
+          <div id="ownerText" class="meta-value">-</div>
+        </div>
+        <div class="meta">
+          <div class="meta-label">Lokasi</div>
+          <div id="locationText" class="meta-value">Kabupaten Tangerang</div>
+        </div>
+        <div class="meta">
+          <div class="meta-label">Update Terakhir</div>
+          <div id="updateText" class="meta-value">Memuat...</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="kpi-grid">
+      <article class="kpi">
+        <div class="kpi-icon">🌡️</div>
+        <div class="kpi-title">Temperature</div>
+        <div class="kpi-value"><span id="tempVal">--</span><span class="kpi-unit">°C</span></div>
+      </article>
+
+      <article class="kpi">
+        <div class="kpi-icon">💧</div>
+        <div class="kpi-title">Humidity</div>
+        <div class="kpi-value"><span id="humVal">--</span><span class="kpi-unit">%</span></div>
+      </article>
+
+      <article class="kpi">
+        <div class="kpi-icon">🧭</div>
+        <div class="kpi-title">Pressure</div>
+        <div class="kpi-value"><span id="pressVal">--</span><span class="kpi-unit">kPa</span></div>
+      </article>
+
+      <article class="kpi">
+        <div class="kpi-icon">🫧</div>
+        <div class="kpi-title">Gas Resistance</div>
+        <div class="kpi-value"><span id="gasVal">--</span><span class="kpi-unit">Ω</span></div>
+      </article>
+
+      <article class="kpi">
+        <div class="kpi-icon">🏠</div>
+        <div class="kpi-title">Indoor Freshness</div>
+        <div class="kpi-value"><span id="iaqVal">--</span><span class="kpi-unit">IAQ</span></div>
+      </article>
+    </section>
+
+    <section class="card">
+      <h2>Risk Interpretation Matrix</h2>
+      <div id="riskGrid" class="risk-grid">
+        <div class="message">Menghitung interpretasi risiko lingkungan...</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Seluruh Data Sensor</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Nama Sensor</th>
+              <th>Nilai</th>
+              <th>Satuan</th>
+              <th>Deskripsi Metrik</th>
+            </tr>
+          </thead>
+          <tbody id="sensorTable">
+            <tr>
+              <td colspan="4">
+                <div class="message">Mengambil data dari Smart Citizen API...</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer>
+      Catatan: IAQ pada channel 241 adalah proxy VOC / air-freshness index, bukan AQI regulasi berbasis PM2.5 dan bukan CO2.
+    </footer>
+  </main>
+
+  <script>
+    const deviceId = "19684";
+    const apiUrl = "https://api.smartcitizen.me/v0/devices/" + deviceId;
+
+    const el = {
+      deviceName: document.getElementById("deviceName"),
+      deviceStatus: document.getElementById("deviceStatus"),
+      statusBadge: document.getElementById("statusBadge"),
+      deviceIdText: document.getElementById("deviceIdText"),
+      ownerText: document.getElementById("ownerText"),
+      locationText: document.getElementById("locationText"),
+      updateText: document.getElementById("updateText"),
+      tempVal: document.getElementById("tempVal"),
+      humVal: document.getElementById("humVal"),
+      pressVal: document.getElementById("pressVal"),
+      gasVal: document.getElementById("gasVal"),
+      iaqVal: document.getElementById("iaqVal"),
+      riskGrid: document.getElementById("riskGrid"),
+      sensorTable: document.getElementById("sensorTable")
+    };
+
+    function fmt(value) {
+      if (value === null || value === undefined || value === "") return "--";
+      const n = Number(value);
+      if (Number.isNaN(n)) return String(value);
+      return n.toFixed(2);
+    }
+
+    function getSensors(json) {
+      if (json.data && Array.isArray(json.data.sensors)) return json.data.sensors;
+      if (Array.isArray(json.sensors)) return json.sensors;
+      return [];
+    }
+
+    function sensorText(sensor) {
+      return [
+        sensor.name,
+        sensor.description,
+        sensor.unit,
+        sensor.measurement && sensor.measurement.name,
+        sensor.measurement && sensor.measurement.description
+      ].filter(Boolean).join(" ").toLowerCase();
+    }
+
+    function findSensor(sensors, keywords) {
+      return sensors.find(sensor => {
+        const text = sensorText(sensor);
+        return keywords.some(k => text.includes(k));
+      });
+    }
+
+    function valueOf(sensor) {
+      return sensor ? Number(sensor.value) : null;
+    }
+
+    function classify(level) {
+      if (level === "Normal") return "normal";
+      if (level === "Watch") return "watch";
+      return "problem";
+    }
+
+    function riskCard(title, level, text) {
+      return `
+        <div class="risk ${classify(level)}">
+          <h3>${title}</h3>
+          <div class="level">${level}</div>
+          <p>${text}</p>
+        </div>
+      `;
+    }
+
+    function iaqBand(iaq) {
+      if (iaq === null) return ["Watch", "Data IAQ belum tersedia."];
+      if (iaq <= 50) return ["Normal", "Good indoor air-freshness condition."];
+      if (iaq <= 100) return ["Normal", "Average indoor air-freshness condition."];
+      if (iaq <= 150) return ["Watch", "Lightly polluted air-freshness index. Pantau ventilasi dan aktivitas ruangan."];
+      if (iaq <= 200) return ["Watch", "Moderate VOC / air-freshness issue. Pertimbangkan buka ventilasi."];
+      if (iaq <= 300) return ["Problem", "Poor air-freshness condition. Cek sumber VOC seperti masak, dupa, pembersih, atau offgassing."];
+      return ["Problem", "Very poor air-freshness condition. Ventilasi sangat disarankan."];
+    }
+
+    function renderRisks(temp, rh, pressure, iaq) {
+      let html = "";
+
+      if (rh !== null && rh > 70) {
+        html += riskCard("Mold & Damp Risk", "Problem", "RH berada di atas 70%. Kondisi ini mendukung risiko mold, bau lembap, dan iritasi pernapasan.");
+      } else if (rh !== null && rh >= 60) {
+        html += riskCard("Mold & Damp Risk", "Watch", "RH berada pada zona 60–70%. Perlu dipantau, terutama jika berlangsung berjam-jam atau semalaman.");
+      } else {
+        html += riskCard("Mold & Damp Risk", "Normal", "RH berada pada rentang relatif nyaman dan lebih rendah untuk risiko mold.");
+      }
+
+      if (rh !== null && rh > 60) {
+        html += riskCard("Dust-mite / Allergen Risk", "Watch", "RH di atas 60% dapat mendukung tungau debu dan alergen, terutama pada kasur, kain, dan ruangan tertutup.");
+      } else {
+        html += riskCard("Dust-mite / Allergen Risk", "Normal", "Kelembapan masih relatif terkendali untuk risiko dust mite.");
+      }
+
+      if ((temp !== null && temp > 30) || (temp !== null && rh !== null && temp >= 28 && rh > 70)) {
+        html += riskCard("Thermal Comfort / Heat", "Problem", "Suhu atau kombinasi suhu-lembap dapat menimbulkan ketidaknyamanan termal.");
+      } else if (temp !== null && temp >= 28) {
+        html += riskCard("Thermal Comfort / Heat", "Watch", "Suhu masuk zona hangat. Pantau ventilasi dan paparan panas siang hari.");
+      } else {
+        html += riskCard("Thermal Comfort / Heat", "Normal", "Suhu berada pada rentang relatif nyaman untuk rumah tropis.");
+      }
+
+      if (temp !== null && rh !== null && temp > 26 && rh > 70) {
+        html += riskCard("Sleep Environment", "Problem", "Malam hari dengan suhu >26°C dan RH >70% dapat mengganggu kualitas tidur, terutama anak dan lansia.");
+      } else {
+        html += riskCard("Sleep Environment", "Normal", "Kondisi belum menunjukkan kombinasi panas-lembap ekstrem untuk tidur.");
+      }
+
+      if (temp !== null && rh !== null && temp >= 25 && temp <= 30 && rh > 60) {
+        html += riskCard("Aedes / Dengue Suitability", "Watch", "Suhu dan kelembapan mendukung kesesuaian lingkungan bagi Aedes. Ini bukan deteksi nyamuk; tetap lakukan PSN/3M Plus.");
+      } else {
+        html += riskCard("Aedes / Dengue Suitability", "Normal", "Kondisi saat ini tidak sepenuhnya berada pada kombinasi utama yang mendukung dengue suitability.");
+      }
+
+      const iaqResult = iaqBand(iaq);
+      html += riskCard("Indoor Air-Freshness / IAQ", iaqResult[0], iaqResult[1]);
+
+      el.riskGrid.innerHTML = html;
+    }
+
+    function renderMetadata(json) {
+      const isOnline = json.state === "online" || json.state === "has_published";
+
+      el.deviceName.textContent = json.name || "Bayu Indoor BME680 Dashboard";
+      el.deviceStatus.textContent = isOnline ? "ONLINE" : "OFFLINE";
+      el.statusBadge.classList.toggle("offline", !isOnline);
+      el.deviceIdText.textContent = deviceId;
+      el.ownerText.textContent = json.owner && json.owner.username ? json.owner.username : "-";
+      el.locationText.textContent = json.location && json.location.city ? json.location.city : "Kabupaten Tangerang";
+      el.updateText.textContent = json.last_recorded_at ? new Date(json.last_recorded_at).toLocaleString("id-ID") : "-";
+    }
+
+    function renderTable(sensors) {
+      if (!sensors.length) {
+        el.sensorTable.innerHTML = `
+          <tr><td colspan="4"><div class="message">Tidak ada sensor aktif ditemukan.</div></td></tr>
+        `;
+        return;
+      }
+
+      el.sensorTable.innerHTML = sensors.map(sensor => {
+        const desc =
+          sensor.measurement && sensor.measurement.description
+            ? sensor.measurement.description
+            : sensor.description || "Deskripsi belum tersedia dari API.";
+
+        return `
+          <tr>
+            <td><span class="sensor-name">${sensor.name || "Sensor"}</span></td>
+            <td><span class="sensor-value">${fmt(sensor.value)}</span></td>
+            <td><span class="badge">${sensor.unit || "-"}</span></td>
+            <td><span class="desc">${desc}</span></td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    async function loadDashboard() {
+      try {
+        const res = await fetch(apiUrl, {
+          method: "GET",
+          mode: "cors",
+          headers: { "Accept": "application/json" }
+        });
+
+        if (!res.ok) throw new Error("API response status: " + res.status);
+
+        const json = await res.json();
+        const sensors = getSensors(json);
+
+        const tempSensor = findSensor(sensors, ["temperature", "air temperature", "°c", "ºc"]);
+        const humSensor = findSensor(sensors, ["humidity", "relative humidity"]);
+        const pressureSensor = findSensor(sensors, ["pressure", "barometric"]);
+        const gasSensor = findSensor(sensors, ["gas resistance", "gas"]);
+        const iaqSensor = findSensor(sensors, ["iaq", "air quality", "air-freshness"]);
+
+        const temp = valueOf(tempSensor);
+        const rh = valueOf(humSensor);
+        const pressure = valueOf(pressureSensor);
+        const gas = valueOf(gasSensor);
+        const iaq = valueOf(iaqSensor);
+
+        renderMetadata(json);
+
+        el.tempVal.textContent = fmt(temp);
+        el.humVal.textContent = fmt(rh);
+        el.pressVal.textContent = fmt(pressure);
+        el.gasVal.textContent = fmt(gas);
+        el.iaqVal.textContent = fmt(iaq);
+
+        renderRisks(temp, rh, pressure, iaq);
+        renderTable(sensors);
+
+      } catch (error) {
+        console.error(error);
+        el.statusBadge.classList.add("offline");
+        el.deviceStatus.textContent = "OFFLINE";
+
+        el.sensorTable.innerHTML = `
+          <tr>
+            <td colspan="4">
+              <div class="message error">
+                Data belum dapat dimuat. Periksa koneksi internet, akses Smart Citizen API, atau konfigurasi GitHub Pages.
+              </div>
+            </td>
+          </tr>
+        `;
+
+        el.riskGrid.innerHTML = `
+          <div class="message error">
+            Interpretasi risiko belum dapat dihitung karena data sensor gagal dimuat.
+          </div>
+        `;
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", loadDashboard);
+    setInterval(loadDashboard, 300000);
+  </script>
+</body>
+</html>
