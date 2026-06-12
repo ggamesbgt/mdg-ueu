@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Citizen API Reader</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; margin: 20px; background-color: #f4f6f9; color: #333; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .device-info { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 24px; border: 1px solid #e1e4e8; }
+        .device-info h2 { margin-top: 0; color: #0056b3; font-size: 1.5rem; }
+        .status-online { background: #e6f4ea; color: #137333; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85rem; }
+        .status-offline { background: #fce8e6; color: #c5221f; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85rem; }
+        p { margin: 8px 0; font-size: 0.95rem; }
+        table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e1e4e8; }
+        th, td { padding: 14px 16px; text-align: left; border-bottom: 1px solid #f0f2f5; }
+        th { background-color: #0056b3; color: white; font-weight: 600; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.5px; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: #f8f9fa; }
+        .loading { font-style: italic; color: #666; text-align: center; padding: 30px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="device-info">
+            <h2 id="dev-name">Memuat Data Perangkat...</h2>
+            <p><strong>Status:</strong> <span id="dev-state">-</span></p>
+            <p><strong>Pembaruan Terakhir:</strong> <span id="dev-time">-</span></p>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Nama Sensor</th>
+                    <th>Nilai Saat Ini</th>
+                    <th>Satuan</th>
+                </tr>
+            </thead>
+            <tbody id="sensor-table-body">
+                <tr>
+                    <td colspan="3" class="loading">Sedang mengambil data sensor real-time...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // Di GitHub Pages, kita bisa langsung menembak API asli tanpa bantuan Proxy CORS!
+        const apiUrl = 'https://smartcitizen.me';
+
+        fetch(apiUrl)
+            .then(response => {
+                if (!response.ok) throw new Error('Respon jaringan bermasalah');
+                return response.json();
+            })
+            .then(json => {
+                // 1. Isi Metadata Perangkat
+                document.getElementById('dev-name').innerText = json.name || "Perangkat Tanpa Nama";
+                
+                const stateEl = document.getElementById('dev-state');
+                const isOnline = json.state === 'online';
+                stateEl.innerText = isOnline ? 'ONLINE' : 'OFFLINE';
+                stateEl.className = isOnline ? 'status-online' : 'status-offline';
+                
+                // Format waktu lokal
+                const lastUpdate = new Date(json.last_recorded_at);
+                document.getElementById('dev-time').innerText = lastUpdate.toLocaleString('id-ID');
+
+                // 2. Isi Tabel Sensor
+                const tableBody = document.getElementById('sensor-table-body');
+                tableBody.innerHTML = ''; 
+
+                if (json.data && json.data.sensors) {
+                    json.data.sensors.forEach(sensor => {
+                        const row = document.createElement('tr');
+                        const valueFormatted = typeof sensor.value === 'number' ? sensor.value.toFixed(2) : sensor.value;
+
+                        row.innerHTML = `
+                            <td><strong>${sensor.name}</strong></td>
+                            <td>${valueFormatted}</td>
+                            <td>${sensor.unit || '-'}</td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                } else {
+                    tableBody.innerHTML = '<tr><td colspan="3" class="loading">Data sensor tidak ditemukan.</td></tr>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('sensor-table-body').innerHTML = '<tr><td colspan="3" style="color:red; text-align:center; padding:20px;">Gagal memuat data langsung dari Smart Citizen API.</td></tr>';
+            });
+    </script>
+
+</body>
+</html>
