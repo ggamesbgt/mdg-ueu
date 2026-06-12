@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Risiko Lingkungan</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f9;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: auto;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    h1 {
+      color: #0056b3;
+      margin-top: 0;
+    }
+
+    .value {
+      font-size: 28px;
+      font-weight: bold;
+    }
+
+    .risk {
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    .high {
+      background: #fce8e6;
+      color: #c5221f;
+    }
+
+    .medium {
+      background: #fff4ce;
+      color: #8a6d00;
+    }
+
+    .low {
+      background: #e6f4ea;
+      color: #137333;
+    }
+
+    .small {
+      font-size: 14px;
+      color: #666;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+
+    <div class="card">
+      <h1>Dashboard Risiko Lingkungan</h1>
+      <p><strong>Device ID:</strong> <span id="device-id">19684</span></p>
+      <p><strong>Update terakhir:</strong> <span id="last-update">Memuat...</span></p>
+    </div>
+
+    <div class="card">
+      <h2>Data Sensor</h2>
+      <p>Suhu:</p>
+      <div class="value"><span id="temperature">-</span> °C</div>
+
+      <p>Kelembapan Relatif:</p>
+      <div class="value"><span id="humidity">-</span> %</div>
+    </div>
+
+    <div class="card">
+      <h2>Identifikasi Dengue Mosquito Habitat</h2>
+      <div id="dengue-risk" class="risk">Memuat data...</div>
+      <p class="small">
+        Kriteria dasar: Aedes aegypti berkembang optimal pada suhu 25–30°C dan kelembapan relatif di atas 70%.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Identifikasi Mold & Respiratory Health</h2>
+      <div id="mold-risk" class="risk">Memuat data...</div>
+      <p class="small">
+        Kriteria dasar: jamur/mold tumbuh pada kelembapan relatif di atas 60% dengan suhu 20–30°C.
+      </p>
+    </div>
+
+  </div>
+
+  <script>
+    const deviceId = "19684";
+    const apiUrl = `https://api.smartcitizen.me/v0/devices/${deviceId}`;
+
+    async function fetchData() {
+      try {
+        const response = await fetch(apiUrl);
+        if (!response.ok) {
+          throw new Error("Gagal mengambil data API");
+        }
+
+        const data = await response.json();
+
+        document.getElementById("last-update").innerText =
+          data.last_recorded_at
+            ? new Date(data.last_recorded_at).toLocaleString("id-ID")
+            : "-";
+
+        const sensors = data.data && data.data.sensors ? data.data.sensors : [];
+
+        let temperature = null;
+        let humidity = null;
+
+        sensors.forEach(sensor => {
+          const name = sensor.name.toLowerCase();
+
+          if (name.includes("temperature")) {
+            temperature = sensor.value;
+          }
+
+          if (
+            name.includes("humidity") ||
+            name.includes("relative humidity")
+          ) {
+            humidity = sensor.value;
+          }
+        });
+
+        document.getElementById("temperature").innerText =
+          temperature !== null ? temperature.toFixed(2) : "-";
+
+        document.getElementById("humidity").innerText =
+          humidity !== null ? humidity.toFixed(2) : "-";
+
+        evaluateRisk(temperature, humidity);
+
+      } catch (error) {
+        console.error(error);
+        document.getElementById("last-update").innerText = "Gagal memuat data";
+        document.getElementById("dengue-risk").innerText = "Data tidak tersedia";
+        document.getElementById("mold-risk").innerText = "Data tidak tersedia";
+      }
+    }
+
+    function evaluateRisk(temp, rh) {
+      const dengueBox = document.getElementById("dengue-risk");
+      const moldBox = document.getElementById("mold-risk");
+
+      if (temp === null || rh === null) {
+        dengueBox.innerText = "Data suhu atau kelembapan tidak tersedia";
+        moldBox.innerText = "Data suhu atau kelembapan tidak tersedia";
+        dengueBox.className = "risk medium";
+        moldBox.className = "risk medium";
+        return;
+      }
+
+      // Dengue mosquito habitat
+      if (temp >= 25 && temp <= 30 && rh > 70) {
+        dengueBox.innerText = "BERPOTENSI TINGGI sebagai habitat nyamuk dengue";
+        dengueBox.className = "risk high";
+      } else if (temp >= 24 && temp <= 32 && rh >= 60) {
+        dengueBox.innerText = "BERPOTENSI SEDANG sebagai habitat nyamuk dengue";
+        dengueBox.className = "risk medium";
+      } else {
+        dengueBox.innerText = "POTENSI RENDAH sebagai habitat nyamuk dengue";
+        dengueBox.className = "risk low";
+      }
+
+      // Mold and respiratory health
+      if (temp >= 20 && temp <= 30 && rh > 60) {
+        moldBox.innerText = "BERPOTENSI TINGGI untuk pertumbuhan mold dan risiko gangguan pernapasan";
+        moldBox.className = "risk high";
+      } else if (temp >= 18 && temp <= 32 && rh >= 55) {
+        moldBox.innerText = "BERPOTENSI SEDANG untuk pertumbuhan mold";
+        moldBox.className = "risk medium";
+      } else {
+        moldBox.innerText = "POTENSI RENDAH untuk pertumbuhan mold";
+        moldBox.className = "risk low";
+      }
+    }
+
+    fetchData();
+
+    // refresh otomatis setiap 5 menit
+    setInterval(fetchData, 300000);
+  </script>
+</body>
+</html>
