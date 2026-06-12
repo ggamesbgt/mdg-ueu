@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dasbor Sensor VS_KBNJERUK</title>
+    <title>Dasbor Sensor VS_KBNJERUK (Direct)</title>
     <style>
         :root {
             --primary: #0056b3;
@@ -153,8 +153,6 @@
         }
 
         @media (max-width: 600px) {
-            body { padding: 12px; }
-            th, td { padding: 12px; }
             th:nth-child(4), td:nth-child(4) { display: none; }
         }
     </style>
@@ -163,7 +161,7 @@
 
     <div class="container">
         <div class="header-card">
-            <h1 id="dev-name">Menghubungkan ke API...</h1>
+            <h1 id="dev-name">Menghubungkan Langsung ke API v2...</h1>
             <div class="meta-grid">
                 <div class="meta-item"><strong>Status:</strong> <span id="dev-state" class="status-badge">-</span></div>
                 <div class="meta-item"><strong>Pemilik:</strong> <span id="dev-owner">-</span></div>
@@ -192,41 +190,36 @@
 
     <script>
         const deviceId = '19684';
-        const targetUrl = `https://smartcitizen.me{deviceId}`;
-        
-        // Memakai proxy bypass alternatif yang didukung penuh oleh Cloudflare Worker gratis
-        const proxyUrl = `https://allorigins.win{encodeURIComponent(targetUrl)}`;
+        const directApiUrl = `https://smartcitizen.me{deviceId}`;
 
-        function fetchSensorData() {
-            fetch(proxyUrl)
-                .then(response => {
-                    if (!response.ok) throw new Error('Proxy Gagal Merespon');
-                    return response.json();
-                })
-                .then(data => {
-                    updateMetadata(data);
-                    renderTableRows(data);
-                })
-                .catch(error => {
-                    console.error('Error saat fetch data:', error);
-                    
-                    // JALUR DARURAT: Jika proxy pertama gagal, coba tembak langsung tanpa proxy (beberapa browser modern mengizinkannya)
-                    fetch(targetUrl)
-                        .then(res => res.json())
-                        .then(data => {
-                            updateMetadata(data);
-                            renderTableRows(data);
-                        })
-                        .catch(() => {
-                            document.getElementById('sensor-table-body').innerHTML = `
-                                <tr>
-                                    <td colspan="4" class="error-state">
-                                        ⚠️ Gagal memuat data otomatis. Silakan coba muat ulang halaman (Refresh) browser Anda.
-                                    </td>
-                                </tr>
-                            `;
-                        });
-                });
+        function fetchSensorDataDirect() {
+            // Memanggil API secara langsung menggunakan mode cors bawaan browser 
+            // tanpa memicu preflight pre-check yang ketat
+            fetch(directApiUrl, {
+                method: 'GET',
+                mode: 'cors',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Respon jaringan gagal');
+                return response.json();
+            })
+            .then(data => {
+                updateMetadata(data);
+                renderTableRows(data);
+            })
+            .catch(error => {
+                console.error('Koneksi langsung gagal:', error);
+                document.getElementById('sensor-table-body').innerHTML = `
+                    <tr>
+                        <td colspan="4" class="error-state">
+                            ⚠️ Gagal memuat data secara langsung. Browser Anda memblokir koneksi lintas domain.
+                        </td>
+                    </tr>
+                `;
+            });
         }
 
         function updateMetadata(json) {
@@ -278,7 +271,7 @@
             });
         }
 
-        document.addEventListener('DOMContentLoaded', fetchSensorData);
+        document.addEventListener('DOMContentLoaded', fetchSensorDataDirect);
     </script>
 </body>
 </html>
