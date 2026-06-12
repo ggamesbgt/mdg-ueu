@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kabupaten Tangerang Kini Terlihat</title>
+
+  <style>
+    :root {
+      --bg: #efe3c8;
+      --ink: #15171c;
+      --gold: #cc8420;
+      --muted: #57534e;
+      --line: rgba(21, 23, 28, 0.25);
+      --card: rgba(255, 248, 232, 0.72);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #e8ddc4, #f5e4bd);
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      overflow-x: hidden;
+    }
+
+    .particles {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .dot {
+      position: absolute;
+      width: 5px;
+      height: 5px;
+      background: rgba(117, 96, 61, 0.35);
+      border-radius: 50%;
+      animation: float 9s infinite ease-in-out;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); opacity: .35; }
+      50% { transform: translateY(-18px); opacity: .8; }
+    }
+
+    .page {
+      position: relative;
+      z-index: 1;
+      max-width: 1250px;
+      margin: 0 auto;
+      padding: 28px 32px 60px;
+    }
+
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      letter-spacing: 6px;
+      font-size: 13px;
+      text-transform: uppercase;
+      margin-bottom: 85px;
+    }
+
+    .brand {
+      color: var(--gold);
+      font-weight: 700;
+    }
+
+    .nav-right {
+      display: flex;
+      gap: 38px;
+      color: var(--muted);
+    }
+
+    .eyebrow {
+      letter-spacing: 9px;
+      text-transform: uppercase;
+      font-size: 14px;
+      color: #30323a;
+      margin-bottom: 18px;
+    }
+
+    .hero-title {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(62px, 10vw, 145px);
+      line-height: .9;
+      margin: 0;
+      font-weight: 500;
+    }
+
+    .hero-title span {
+      color: var(--gold);
+      font-style: italic;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 55px;
+      margin-top: 70px;
+      align-items: center;
+    }
+
+    .main-value {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .metric-line {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(70px, 12vw, 165px);
+      line-height: .82;
+      color: var(--gold);
+      font-weight: 500;
+    }
+
+    .metric-unit {
+      font-size: clamp(28px, 4vw, 56px);
+      color: var(--gold);
+      margin-left: 12px;
+    }
+
+    .main-label {
+      letter-spacing: 8px;
+      text-transform: uppercase;
+      font-size: 14px;
+      color: #424242;
+      margin-bottom: 16px;
+      line-height: 1.7;
+    }
+
+    .main-desc {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(34px, 4vw, 54px);
+      line-height: 1.15;
+      font-style: italic;
+    }
+
+    .device-box {
+      margin-top: 30px;
+      padding: 18px 20px;
+      border: 1px solid rgba(21, 23, 28, 0.25);
+      background: rgba(255, 248, 232, 0.45);
+      border-radius: 14px;
+      font-size: 15px;
+      line-height: 1.8;
+    }
+
+    .intro {
+      margin-top: 62px;
+      max-width: 760px;
+      font-size: 23px;
+      line-height: 1.5;
+      color: #30323a;
+    }
+
+    .actions {
+      display: flex;
+      gap: 20px;
+      margin-top: 45px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border: 1.5px solid var(--ink);
+      padding: 19px 34px;
+      min-width: 300px;
+      text-align: center;
+      text-decoration: none;
+      color: var(--ink);
+      background: transparent;
+      text-transform: uppercase;
+      letter-spacing: 7px;
+      font-size: 13px;
+      border-radius: 4px;
+    }
+
+    .btn.primary {
+      background: var(--ink);
+      color: #fff;
+    }
+
+    .note {
+      margin-top: 28px;
+      max-width: 620px;
+      font-family: "Courier New", monospace;
+      font-size: 14px;
+      line-height: 1.65;
+      color: #4b4945;
+    }
+
+    .section {
+      margin-top: 90px;
+      padding-top: 40px;
+      border-top: 1px solid var(--line);
+    }
+
+    .section h2 {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 46px;
+      font-weight: 500;
+      margin: 0 0 24px;
+    }
+
+    .sensor-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 18px;
+    }
+
+    .sensor-card {
+      background: rgba(255, 250, 238, 0.78);
+      border: 1px solid rgba(21, 23, 28, 0.12);
+      border-radius: 16px;
+      padding: 20px;
+      min-height: 145px;
+    }
+
+    .sensor-name {
+      font-size: 15px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      min-height: 38px;
+    }
+
+    .sensor-value {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 48px;
+      color: var(--gold);
+      margin-top: 12px;
+    }
+
+    .sensor-unit {
+      font-size: 17px;
+      color: var(--ink);
+      margin-left: 4px;
+    }
+
+    .sensor-meta {
+      margin-top: 10px;
+      font-size: 13px;
+      color: #65615a;
+    }
+
+    .error {
+      color: #b00020;
+      font-weight: bold;
+      padding: 16px;
+      background: rgba(255,255,255,0.6);
+      border-radius: 10px;
+    }
+
+    @media (max-width: 760px) {
+      nav { margin-bottom: 55px; }
+      .nav-right { display: none; }
+
+      .hero-grid {
+        grid-template-columns: 1fr;
+        margin-top: 42px;
+      }
+
+      .intro { font-size: 19px; }
+
+      .btn { min-width: 100%; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="particles" id="particles"></div>
+
+  <main class="page">
+    <nav>
+      <div class="brand">MAKING SENSE TANGERANG</div>
+      <div class="nav-right">
+        <div>KISAHNYA</div>
+        <div>TENTANG</div>
+      </div>
+    </nav>
+
+    <div class="eyebrow">SENSOR TERBUKA + DATA LINGKUNGAN WARGA</div>
+
+    <h1 class="hero-title">
+      Tangerang, <span>kini terukur.</span>
+    </h1>
+
+    <section class="hero-grid">
+      <div class="main-value">
+        <div>
+          <span id="temperature-value" class="metric-line">--</span>
+          <span class="metric-unit">°C</span>
+        </div>
+
+        <div>
+          <span id="humidity-value" class="metric-line">--</span>
+          <span class="metric-unit">%</span>
+        </div>
+      </div>
+
+      <div>
+        <div class="main-label">
+          SUHU · KELEMBAPAN · SEKARANG · KABUPATEN TANGERANG
+        </div>
+
+        <div class="main-desc" id="hero-desc">
+          Suhu dan kelembapan lingkungan sedang dibaca langsung dari sensor terbuka.
+        </div>
+
+        <div class="device-box">
+          <div><strong>Nama Device:</strong> <span id="device-name">Memuat...</span></div>
+          <div><strong>Device ID:</strong> <span id="device-id">19684</span></div>
+          <div><strong>Status:</strong> <span id="device-status">Memuat...</span></div>
+          <div><strong>Pemilik:</strong> <span id="device-owner">Memuat...</span></div>
+          <div><strong>Update Terakhir:</strong> <span id="last-update">Memuat...</span></div>
+        </div>
+      </div>
+    </section>
+
+    <p class="intro">
+      Data ini menunjukkan kondisi mikroklimat di sekitar perangkat:
+      seberapa panas udara saat ini dan seberapa lembap lingkungan yang terekam.
+      Informasi ini dapat membantu membaca potensi kenyamanan, kelembapan ruang,
+      serta kondisi yang mendukung risiko lingkungan tertentu.
+    </p>
+
+    <div class="actions">
+      <a class="btn primary" href="#sensor-section">◎ TUNJUKKAN SEMUA SENSOR</a>
+      <a class="btn" href="https://api.smartcitizen.me/ui/devices/19684" target="_blank">
+        LIHAT DEVICE ASLI
+      </a>
+    </div>
+
+    <div class="note">
+      Data dibaca langsung dari Smart Citizen API. Dashboard ini hanya bersifat
+      informatif dan bukan alat peringatan resmi.
+    </div>
+
+    <section class="section" id="sensor-section">
+      <h2>Semua Indikator Sensor</h2>
+      <div id="sensor-grid" class="sensor-grid">
+        Memuat semua indikator sensor...
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const deviceId = "19684";
+    const apiUrl = `https://api.smartcitizen.me/v0/devices/${deviceId}`;
+
+    function createParticles() {
+      const particles = document.getElementById("particles");
+
+      for (let i = 0; i < 95; i++) {
+        const dot = document.createElement("div");
+        dot.className = "dot";
+        dot.style.left = Math.random() * 100 + "%";
+        dot.style.top = Math.random() * 100 + "%";
+        dot.style.width = Math.random() * 5 + 2 + "px";
+        dot.style.height = dot.style.width;
+        dot.style.animationDelay = Math.random() * 8 + "s";
+        dot.style.animationDuration = Math.random() * 8 + 6 + "s";
+        particles.appendChild(dot);
+      }
+    }
+
+    function formatNumber(value) {
+      if (value === null || value === undefined || value === "") return "--";
+      const num = Number(value);
+      if (Number.isNaN(num)) return "--";
+      return num.toFixed(1);
+    }
+
+    function getSensors(data) {
+      if (data.data && Array.isArray(data.data.sensors)) {
+        return data.data.sensors;
+      }
+
+      if (Array.isArray(data.sensors)) {
+        return data.sensors;
+      }
+
+      return [];
+    }
+
+    function findSensor(sensors, keywords) {
+      return sensors.find(sensor => {
+        const text = [
+          sensor.name,
+          sensor.description,
+          sensor.unit,
+          sensor.measurement && sensor.measurement.name,
+          sensor.measurement && sensor.measurement.description
+        ].join(" ").toLowerCase();
+
+        return keywords.some(keyword => text.includes(keyword));
+      });
+    }
+
+    function renderHero(data, sensors) {
+      const tempSensor = findSensor(sensors, [
+        "temperature",
+        "temp",
+        "ºc",
+        "°c"
+      ]);
+
+      const humiditySensor = findSensor(sensors, [
+        "humidity",
+        "relative humidity"
+      ]);
+
+      const temp = tempSensor ? tempSensor.value : null;
+      const humidity = humiditySensor ? humiditySensor.value : null;
+
+      document.getElementById("temperature-value").innerText = formatNumber(temp);
+      document.getElementById("humidity-value").innerText = formatNumber(humidity);
+
+      let desc = "Suhu dan kelembapan lingkungan sedang dibaca langsung dari sensor terbuka.";
+
+      if (temp !== null && humidity !== null) {
+        desc = `Saat ini suhu terbaca ${formatNumber(temp)}°C dengan kelembapan relatif ${formatNumber(humidity)}%. Kondisi mikroklimat Tangerang kini dapat dilihat secara langsung.`;
+      }
+
+      document.getElementById("hero-desc").innerText = desc;
+
+      document.getElementById("device-name").innerText =
+        data.name || `Device ${deviceId}`;
+
+      document.getElementById("device-status").innerText =
+        data.state || "-";
+
+      document.getElementById("device-owner").innerText =
+        data.owner && data.owner.username ? data.owner.username : "-";
+
+      document.getElementById("last-update").innerText =
+        data.last_recorded_at
+          ? new Date(data.last_recorded_at).toLocaleString("id-ID")
+          : "-";
+    }
+
+    function renderSensors(sensors) {
+      const grid = document.getElementById("sensor-grid");
+
+      if (!sensors.length) {
+        grid.innerHTML = `<div class="error">Tidak ada indikator sensor ditemukan.</div>`;
+        return;
+      }
+
+      grid.innerHTML = sensors.map(sensor => {
+        const name = sensor.name || "Sensor";
+        const value = formatNumber(sensor.value);
+        const unit = sensor.unit || "";
+        const description =
+          sensor.description ||
+          sensor.measurement?.description ||
+          sensor.measurement?.name ||
+          "Indikator sensor lingkungan";
+
+        return `
+          <div class="sensor-card">
+            <div class="sensor-name">${name}</div>
+            <div class="sensor-value">
+              ${value}<span class="sensor-unit">${unit}</span>
+            </div>
+            <div class="sensor-meta">${description}</div>
+            <div class="sensor-meta">Sensor ID: ${sensor.id || "-"}</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    async function loadData() {
+      try {
+        const response = await fetch(apiUrl);
+
+        if (!response.ok) {
+          throw new Error("Gagal membaca Smart Citizen API");
+        }
+
+        const data = await response.json();
+        const sensors = getSensors(data);
+
+        renderHero(data, sensors);
+        renderSensors(sensors);
+
+      } catch (error) {
+        console.error(error);
+
+        document.getElementById("hero-desc").innerText =
+          "Gagal memuat data dari Smart Citizen API.";
+
+        document.getElementById("sensor-grid").innerHTML =
+          `<div class="error">Gagal memuat semua indikator sensor.</div>`;
+      }
+    }
+
+    createParticles();
+    loadData();
+
+    setInterval(loadData, 300000);
+  </script>
+</body>
+</html>
