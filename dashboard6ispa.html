@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kabupaten Tangerang Environmental Health & Urban Resilience Platform</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <style>
+    :root{
+      --bg:#f8fafd;
+      --primary:#0066ff;
+      --green:#10b981;
+      --yellow:#f59e0b;
+      --red:#ef4444;
+      --text:#111827;
+      --muted:#6b7280;
+      --border:#e5e7eb;
+      --blue-soft:#eaf2ff;
+      --green-soft:#ecfdf5;
+      --yellow-soft:#fff7ed;
+      --red-soft:#fef2f2;
+      --shadow:0 18px 45px rgba(15,23,42,.08);
+      --radius:22px;
+    }
+
+    *{box-sizing:border-box}
+
+    body{
+      margin:0;
+      background:
+        radial-gradient(circle at top left,rgba(0,102,255,.12),transparent 32%),
+        radial-gradient(circle at top right,rgba(16,185,129,.10),transparent 30%),
+        var(--bg);
+      color:var(--text);
+      font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    }
+
+    .page{
+      width:min(1240px,calc(100% - 28px));
+      margin:auto;
+      padding:28px 0 56px;
+    }
+
+    .hero,.card,.kpi,.risk{
+      background:rgba(255,255,255,.92);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+    }
+
+    .hero{
+      padding:30px;
+      margin-bottom:22px;
+    }
+
+    .eyebrow{
+      color:var(--primary);
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      margin-bottom:10px;
+    }
+
+    h1{
+      margin:0;
+      font-size:clamp(30px,5vw,54px);
+      line-height:1.05;
+      letter-spacing:-.04em;
+    }
+
+    h2{
+      margin:0 0 18px;
+      font-size:22px;
+    }
+
+    .subtitle{
+      max-width:920px;
+      color:var(--muted);
+      line-height:1.65;
+      margin:14px 0 0;
+      font-size:15px;
+    }
+
+    .controls{
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-top:24px;
+      align-items:end;
+    }
+
+    .control label{
+      display:block;
+      font-size:12px;
+      color:var(--muted);
+      font-weight:900;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      margin-bottom:7px;
+    }
+
+    select,input,button{
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:12px 14px;
+      background:#fff;
+      font-size:14px;
+      font-weight:800;
+    }
+
+    button{
+      background:var(--primary);
+      color:#fff;
+      cursor:pointer;
+    }
+
+    .kpi-grid{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:16px;
+      margin-bottom:22px;
+    }
+
+    .kpi{
+      padding:20px;
+      min-height:168px;
+    }
+
+    .kpi-icon{
+      width:44px;
+      height:44px;
+      display:grid;
+      place-items:center;
+      border-radius:15px;
+      background:var(--blue-soft);
+      color:var(--primary);
+      font-size:23px;
+      margin-bottom:16px;
+    }
+
+    .kpi-title{
+      color:var(--muted);
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:.09em;
+      text-transform:uppercase;
+    }
+
+    .kpi-value{
+      margin-top:8px;
+      font-size:30px;
+      font-weight:950;
+      letter-spacing:-.04em;
+    }
+
+    .kpi-unit{
+      font-size:14px;
+      color:var(--muted);
+      font-weight:800;
+      margin-left:3px;
+    }
+
+    .kpi-source{
+      margin-top:10px;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.45;
+      font-weight:700;
+    }
+
+    .card{
+      padding:24px;
+      margin-bottom:22px;
+    }
+
+    .grid-2{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:16px;
+    }
+
+    .grid-3{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:16px;
+    }
+
+    .risk{
+      padding:20px;
+    }
+
+    .risk h3{
+      margin:0 0 10px;
+      font-size:16px;
+    }
+
+    .level{
+      display:inline-block;
+      padding:7px 10px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:900;
+      margin-bottom:12px;
+    }
+
+    .low .level{background:var(--green-soft);color:#047857}
+    .medium .level{background:var(--yellow-soft);color:#b45309}
+    .high .level{background:var(--red-soft);color:#b91c1c}
+
+    .risk p{
+      margin:0;
+      color:var(--muted);
+      line-height:1.55;
+      font-size:14px;
+    }
+
+    #map{
+      height:420px;
+      border-radius:20px;
+      border:1px solid var(--border);
+      overflow:hidden;
+    }
+
+    canvas{
+      width:100%;
+      height:360px;
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:20px;
+    }
+
+    .table-wrap{
+      overflow-x:auto;
+      border-radius:18px;
+      border:1px solid var(--border);
+    }
+
+    table{
+      width:100%;
+      border-collapse:collapse;
+      background:#fff;
+      min-width:900px;
+    }
+
+    th{
+      background:#f9fafb;
+      color:var(--muted);
+      text-align:left;
+      padding:14px 18px;
+      font-size:12px;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+
+    td{
+      padding:15px 18px;
+      border-top:1px solid var(--border);
+      vertical-align:top;
+      font-size:14px;
+    }
+
+    .mono{
+      font-family:Consolas,Monaco,monospace;
+      font-weight:900;
+    }
+
+    .badge{
+      display:inline-block;
+      padding:5px 9px;
+      border-radius:999px;
+      background:#f3f4f6;
+      color:#374151;
+      font-size:12px;
+      font-weight:800;
+    }
+
+    .message{
+      padding:16px;
+      border-radius:16px;
+      background:var(--yellow-soft);
+      color:#92400e;
+      font-weight:800;
+      line-height:1.55;
+    }
+
+    .message.error{
+      background:var(--red-soft);
+      color:#991b1b;
+    }
+
+    .recommendation{
+      background:#f9fbff;
+      border:1px solid var(--border);
+      border-radius:18px;
+      padding:18px;
+      line-height:1.65;
+      color:var(--text);
+    }
+
+    .health-list{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:10px;
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      padding:6px 10px;
+      border-radius:999px;
+      background:#f3f4f6;
+      color:#374151;
+      font-size:12px;
+      font-weight:900;
+    }
+
+    .note-box{
+      background:#f9fbff;
+      border:1px dashed var(--border);
+      border-radius:18px;
+      padding:16px;
+      color:var(--muted);
+      line-height:1.6;
+      font-size:14px;
+      margin-top:16px;
+    }
+
+    footer{
+      color:var(--muted);
+      text-align:center;
+      font-size:13px;
+      line-height:1.6;
+      margin-top:24px;
+    }
+
+    @media(max-width:1120px){
+      .kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
+
+    @media(max-width:980px){
+      .grid-2,.grid-3{grid-template-columns:1fr}
+    }
+
+    @media(max-width:560px){
+      .page{width:min(100% - 20px,1240px);padding-top:14px}
+      .hero,.card,.kpi,.risk{border-radius:18px;padding:18px}
+      .kpi-grid{grid-template-columns:1fr}
+      select,input,button,.control{width:100%}
+      #map{height:330px}
+      table{min-width:0}
+      th:nth-child(6),td:nth-child(6){display:none}
+      th,td{padding:12px 10px}
+    }
+  </style>
+</head>
+
+<body>
+<main class="page">
+
+  <section class="hero">
+    <div class="eyebrow">Kabupaten Tangerang · Environmental Health & Urban Resilience</div>
+    <h1>Environmental Health Intelligence Platform</h1>
+    <p class="subtitle">
+      Platform ini mengintegrasikan data sensor IoT Smart Citizen, prakiraan cuaca BMKG,
+      dan kualitas udara luar ruang dari AQICN/World Air Quality Index untuk mendukung
+      analitik risiko DBD, malaria, mold, TBC environmental watch, ISPA, PPOK, asma, kualitas udara, dan ketahanan perkotaan berbasis data.
+    </p>
+
+    <div class="controls">
+      <div class="control">
+        <label for="deviceMode">Mode Sensor</label>
+        <select id="deviceMode">
+          <option value="all" selected>Semua Device</option>
+          <option value="19686">Device 19686</option>
+          <option value="19684">Device 19684</option>
+          <option value="19682">Device 19682</option>
+        </select>
+      </div>
+
+      <div class="control">
+        <label for="adm4Input">Kode BMKG ADM4</label>
+        <input id="adm4Input" value="36.03.03.1001" />
+      </div>
+
+      <button id="refreshBtn" type="button">Refresh Dashboard</button>
+    </div>
+  </section>
+
+  <section class="kpi-grid">
+    <article class="kpi">
+      <div class="kpi-icon">🌡️</div>
+      <div class="kpi-title">Avg Temperature</div>
+      <div class="kpi-value"><span id="avgTemp">--</span><span class="kpi-unit">°C</span></div>
+      <div class="kpi-source">Sumber: Smart Citizen API · Sensor Temperature</div>
+    </article>
+
+    <article class="kpi">
+      <div class="kpi-icon">💧</div>
+      <div class="kpi-title">Avg Humidity</div>
+      <div class="kpi-value"><span id="avgHum">--</span><span class="kpi-unit">%</span></div>
+      <div class="kpi-source">Sumber: Smart Citizen API · Relative Humidity</div>
+    </article>
+
+    <article class="kpi">
+      <div class="kpi-icon">🌦️</div>
+      <div class="kpi-title">Rain Watch</div>
+      <div class="kpi-value"><span id="rainWatch">--</span><span class="kpi-unit">slot</span></div>
+      <div class="kpi-source">Sumber: BMKG Prakiraan Cuaca API</div>
+    </article>
+
+    <article class="kpi">
+      <div class="kpi-icon">🌫️</div>
+      <div class="kpi-title">Outdoor AQI</div>
+      <div class="kpi-value"><span id="outdoorAqi">--</span></div>
+      <div class="kpi-source">Sumber: AQICN / World Air Quality Index API</div>
+    </article>
+
+    <article class="kpi">
+      <div class="kpi-icon">🫁</div>
+      <div class="kpi-title">Respiratory Watch</div>
+      <div class="kpi-value"><span id="respiratoryLevel">--</span></div>
+      <div class="kpi-source">Sumber: AQI + Humidity + Temperature · Respiratory Risk Engine</div>
+    </article>
+
+    <article class="kpi">
+      <div class="kpi-icon">🧬</div>
+      <div class="kpi-title">TBC Watch</div>
+      <div class="kpi-value"><span id="tbcLevel">--</span></div>
+      <div class="kpi-source">Sumber: Humidity + Temperature + AQI + PM · TBC Environmental Watch</div>
+    </article>
+
+    <article class="kpi">
+      <div class="kpi-icon">🦟</div>
+      <div class="kpi-title">Dengue Risk</div>
+      <div class="kpi-value"><span id="dengueLevel">--</span></div>
+      <div class="kpi-source">Sumber: Smart Citizen + BMKG + Risk Engine</div>
+    </article>
+
+    <article class="kpi">
+      <div class="kpi-icon">🏙️</div>
+      <div class="kpi-title">Resilience Score</div>
+      <div class="kpi-value"><span id="resilienceScore">--</span><span class="kpi-unit">/100</span></div>
+      <div class="kpi-source">Sumber: Environmental Health Risk Index</div>
+    </article>
+  </section>
+
+  <section class="card">
+    <h2>Sensor Network Map</h2>
+    <div id="map"></div>
+  </section>
+
+  <section class="card">
+    <h2>Risk Matrix</h2>
+    <div id="riskGrid" class="grid-3">
+      <div class="message">Menghitung risiko...</div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Respiratory Disease Watch</h2>
+    <div id="respiratoryPanel" class="grid-2">
+      <div class="message">Memuat analisis penyakit pernapasan...</div>
+    </div>
+    <div class="note-box">
+      Catatan: modul ini bukan diagnosis penyakit. Indikator hanya membaca kondisi lingkungan seperti AQI, kelembapan, suhu, PM, dan proksi ventilasi untuk kewaspadaan ISPA, PPOK, asma, TBC environmental watch, serta risiko droplet respirasi.
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Matriks Parameter Sensor untuk Pemetaan Risiko TBC</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Parameter</th>
+            <th>Nilai Saat Ini</th>
+            <th>Korelasi Risiko</th>
+            <th>Kategori</th>
+            <th>Batas Parameter</th>
+          </tr>
+        </thead>
+        <tbody id="tbcMatrixTable">
+          <tr><td colspan="5"><div class="message">Memuat matriks TBC...</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Policy Recommendation Panel</h2>
+    <div id="recommendationBox" class="recommendation">
+      Memuat rekomendasi...
+    </div>
+  </section>
+
+  <section class="grid-2">
+    <section class="card">
+      <h2>Sensor Comparison</h2>
+      <canvas id="sensorChart" width="1000" height="360"></canvas>
+    </section>
+
+    <section class="card">
+      <h2>BMKG Weather Intelligence</h2>
+      <div id="bmkgBox" class="message">Mengambil prakiraan BMKG...</div>
+    </section>
+  </section>
+
+  <section class="card">
+    <h2>Outdoor Air Quality - AQICN</h2>
+    <div id="aqicnBox" class="message">Mengambil data AQICN...</div>
+  </section>
+
+  <section class="card">
+    <h2>Health Data Reference</h2>
+    <div class="grid-2">
+      <div class="risk medium">
+        <h3>Profil Kesehatan Kabupaten Tangerang</h3>
+        <div class="level">REFERENCE</div>
+        <p>
+          Data kesehatan digunakan sebagai baseline epidemiologi, termasuk DBD, malaria,
+          penyakit berbasis lingkungan, fasilitas kesehatan, dan indikator kesehatan daerah.
+          <br><br>
+          <a href="https://dinkes.tangerangkab.go.id/detail-menu-konten/1530" target="_blank">
+            Buka sumber Dinkes Kabupaten Tangerang
+          </a>
+        </p>
+      </div>
+
+      <div class="risk low">
+        <h3>BMKG Prakiraan Cuaca</h3>
+        <div class="level">LIVE API</div>
+        <p>
+          Data BMKG digunakan untuk membaca prakiraan hujan, suhu, dan kelembapan sebagai
+          variabel penguat risiko DBD, malaria, dan mold.
+          <br><br>
+          <a href="https://data.bmkg.go.id/prakiraan-cuaca/" target="_blank">
+            Buka dokumentasi BMKG
+          </a>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Device Data</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Device</th>
+            <th>Status</th>
+            <th>Suhu</th>
+            <th>RH</th>
+            <th>IAQ</th>
+            <th>Koordinat</th>
+            <th>Update</th>
+          </tr>
+        </thead>
+        <tbody id="deviceTable">
+          <tr><td colspan="7"><div class="message">Memuat device...</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    Sumber data: Smart Citizen API, BMKG Open Weather Forecast API, AQICN/World Air Quality Index API,
+    dan rujukan Profil Kesehatan Kabupaten Tangerang. Dashboard ini bersifat informatif dan bukan
+    penetapan resmi status KLB atau diagnosis medis.
+  </footer>
+
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+  const SMART_DEVICES = ["19686", "19684", "19682"];
+  const SMART_API = "https://api.smartcitizen.me/v0/devices/";
+  const BMKG_API = "https://api.bmkg.go.id/publik/prakiraan-cuaca?adm4=";
+
+  const AQICN_TOKEN = "0df3e7dc19437ade55fb3165e6a3327538961e97";
+
+  const el = {
+    deviceMode: document.getElementById("deviceMode"),
+    adm4Input: document.getElementById("adm4Input"),
+    refreshBtn: document.getElementById("refreshBtn"),
+    avgTemp: document.getElementById("avgTemp"),
+    avgHum: document.getElementById("avgHum"),
+    rainWatch: document.getElementById("rainWatch"),
+    outdoorAqi: document.getElementById("outdoorAqi"),
+    respiratoryLevel: document.getElementById("respiratoryLevel"),
+    tbcLevel: document.getElementById("tbcLevel"),
+    dengueLevel: document.getElementById("dengueLevel"),
+    resilienceScore: document.getElementById("resilienceScore"),
+    riskGrid: document.getElementById("riskGrid"),
+    recommendationBox: document.getElementById("recommendationBox"),
+    respiratoryPanel: document.getElementById("respiratoryPanel"),
+    tbcMatrixTable: document.getElementById("tbcMatrixTable"),
+    bmkgBox: document.getElementById("bmkgBox"),
+    aqicnBox: document.getElementById("aqicnBox"),
+    deviceTable: document.getElementById("deviceTable"),
+    sensorChart: document.getElementById("sensorChart")
+  };
+
+  let map;
+  let markers = [];
+
+  function fmt(value){
+    if(value === null || value === undefined || value === "") return "--";
+    const n = Number(value);
+    return Number.isNaN(n) ? "--" : n.toFixed(2);
+  }
+
+  function avg(values){
+    const nums = values.filter(v => v !== null && !Number.isNaN(Number(v))).map(Number);
+    if(!nums.length) return null;
+    return nums.reduce((a,b)=>a+b,0) / nums.length;
+  }
+
+  function avgCoordinate(devices, key){
+    const nums = devices
+      .map(d => d.location[key])
+      .filter(v => v !== null && !Number.isNaN(Number(v)))
+      .map(Number);
+
+    if(!nums.length) return null;
+    return nums.reduce((a,b)=>a+b,0) / nums.length;
+  }
+
+  function getSensors(json){
+    if(json.data && Array.isArray(json.data.sensors)) return json.data.sensors;
+    if(Array.isArray(json.sensors)) return json.sensors;
+    return [];
+  }
+
+  function sensorText(sensor){
+    return [
+      sensor.name,
+      sensor.description,
+      sensor.unit,
+      sensor.measurement && sensor.measurement.name,
+      sensor.measurement && sensor.measurement.description
+    ].filter(Boolean).join(" ").toLowerCase();
+  }
+
+  function findSensor(sensors, keywords){
+    return sensors.find(sensor => {
+      const text = sensorText(sensor);
+      return keywords.some(k => text.includes(k));
+    });
+  }
+
+  function valueOf(sensor){
+    return sensor ? Number(sensor.value) : null;
+  }
+
+  function getLocation(json){
+    const loc = json.location || {};
+    const lat = loc.latitude ?? loc.lat ?? loc.geo_lat ?? null;
+    const lon = loc.longitude ?? loc.lng ?? loc.lon ?? loc.geo_lon ?? null;
+
+    return {
+      city: loc.city || "Kabupaten Tangerang",
+      country: loc.country || "Indonesia",
+      latitude: lat !== null ? Number(lat) : null,
+      longitude: lon !== null ? Number(lon) : null
+    };
+  }
+
+  async function fetchSmartDevice(id){
+    const res = await fetch(SMART_API + id, {
+      method:"GET",
+      mode:"cors",
+      headers:{ "Accept":"application/json" }
+    });
+
+    if(!res.ok) throw new Error("Smart Citizen error " + id);
+
+    const json = await res.json();
+    const sensors = getSensors(json);
+
+    const temp = valueOf(findSensor(sensors, ["temperature", "air temperature", "°c", "ºc"]));
+    const rh = valueOf(findSensor(sensors, ["humidity", "relative humidity"]));
+    const iaq = valueOf(findSensor(sensors, ["iaq", "air quality", "air-freshness"]));
+    const pressure = valueOf(findSensor(sensors, ["pressure", "barometric"]));
+    const gas = valueOf(findSensor(sensors, ["gas resistance", "gas"]));
+    const pm1 = valueOf(findSensor(sensors, ["pm1", "pm 1", "pm1.0", "pm 1.0"]));
+    const pm25 = valueOf(findSensor(sensors, ["pm2.5", "pm 2.5", "pm25"]));
+    const pm10 = valueOf(findSensor(sensors, ["pm10", "pm 10"]));
+
+    return {
+      id,
+      name: json.name || "Device " + id,
+      state: json.state || "-",
+      update: json.last_recorded_at ? new Date(json.last_recorded_at).toLocaleString("id-ID") : "-",
+      location: getLocation(json),
+      temp,
+      rh,
+      iaq,
+      pressure,
+      gas,
+      pm1,
+      pm25,
+      pm10
+    };
+  }
+
+  async function fetchBmkg(adm4){
+    const res = await fetch(BMKG_API + encodeURIComponent(adm4));
+    if(!res.ok) throw new Error("BMKG API error");
+    return await res.json();
+  }
+
+  async function fetchAqicnByGeo(lat, lon){
+    if(lat === null || lon === null) return null;
+
+    const url =
+      "https://api.waqi.info/feed/geo:" +
+      lat +
+      ";" +
+      lon +
+      "/?token=" +
+      AQICN_TOKEN;
+
+    const res = await fetch(url);
+    if(!res.ok) throw new Error("AQICN API error");
+
+    const json = await res.json();
+    if(json.status !== "ok") throw new Error("AQICN response not ok");
+
+    return {
+      aqi: json.data.aqi ?? null,
+      station: json.data.city && json.data.city.name ? json.data.city.name : "-",
+      pm25: json.data.iaqi && json.data.iaqi.pm25 ? json.data.iaqi.pm25.v : null,
+      pm10: json.data.iaqi && json.data.iaqi.pm10 ? json.data.iaqi.pm10.v : null,
+      no2: json.data.iaqi && json.data.iaqi.no2 ? json.data.iaqi.no2.v : null,
+      so2: json.data.iaqi && json.data.iaqi.so2 ? json.data.iaqi.so2.v : null,
+      o3: json.data.iaqi && json.data.iaqi.o3 ? json.data.iaqi.o3.v : null,
+      co: json.data.iaqi && json.data.iaqi.co ? json.data.iaqi.co.v : null,
+      time: json.data.time && json.data.time.s ? json.data.time.s : "-"
+    };
+  }
+
+  function flattenWeather(json){
+    const rows = [];
+
+    function walk(node){
+      if(Array.isArray(node)){
+        node.forEach(walk);
+      } else if(node && typeof node === "object"){
+        if(
+          node.local_datetime ||
+          node.utc_datetime ||
+          node.weather_desc ||
+          node.weather_desc_en ||
+          node.t !== undefined ||
+          node.hu !== undefined
+        ){
+          rows.push(node);
+        }
+        Object.values(node).forEach(walk);
+      }
+    }
+
+    walk(json);
+    return rows;
+  }
+
+  function analyzeBmkg(json){
+    const rows = flattenWeather(json).slice(0, 24);
+
+    const rainRows = rows.filter(r => {
+      const w = String(r.weather_desc || r.weather_desc_en || "").toLowerCase();
+      return w.includes("hujan") || w.includes("rain");
+    });
+
+    const humidRows = rows.filter(r => Number(r.hu) >= 70);
+
+    return {
+      rows,
+      rainCount: rainRows.length,
+      humidCount: humidRows.length,
+      avgTemp: avg(rows.map(r => Number(r.t))),
+      avgHum: avg(rows.map(r => Number(r.hu)))
+    };
+  }
+
+
+  function getLevelScore(level){
+    if(level === "HIGH") return 3;
+    if(level === "MEDIUM") return 2;
+    return 1;
+  }
+
+  function getTbcRisk(temp, rh, aqi, pm25, pm10){
+    let humidityLevel = "LOW";
+    if(rh !== null && rh >= 40 && rh <= 60) humidityLevel = "MEDIUM";
+    if(rh !== null && rh > 60) humidityLevel = "HIGH";
+
+    let temperatureLevel = "LOW";
+    if(temp !== null && temp >= 20 && temp <= 30) temperatureLevel = "MEDIUM";
+    if(temp !== null && temp >= 31 && temp <= 37) temperatureLevel = "HIGH";
+
+    let aqiLevel = "LOW";
+    if(aqi !== null && aqi >= 51 && aqi <= 100) aqiLevel = "MEDIUM";
+    if(aqi !== null && aqi > 100) aqiLevel = "HIGH";
+
+    let pmLevel = "LOW";
+    if((pm25 !== null && pm25 > 15) || (pm10 !== null && pm10 > 45)) pmLevel = "HIGH";
+
+    const score =
+      getLevelScore(humidityLevel) +
+      getLevelScore(temperatureLevel) +
+      getLevelScore(aqiLevel) +
+      getLevelScore(pmLevel);
+
+    let level = "LOW";
+    if(score >= 8 && score <= 10) level = "MEDIUM";
+    if(score > 10) level = "HIGH";
+
+    return { level, humidityLevel, temperatureLevel, aqiLevel, pmLevel, score };
+  }
+
+  function identifyRespiratoryRisk(aqi, humidity, temperature){
+    let status = "LOW";
+    let diseases = [];
+    let recommendations = [];
+
+    if(aqi !== null && aqi > 100){
+      status = "HIGH";
+      diseases.push("ISPA");
+      diseases.push("PPOK");
+      recommendations.push("Bagikan masker medis kepada warga rentan saat AQI tidak sehat.");
+      recommendations.push("Batasi aktivitas luar ruangan bagi anak-anak, lansia, dan penderita penyakit paru.");
+    }
+
+    if(humidity !== null && humidity > 60){
+      status = "HIGH";
+      diseases.push("TBC Environmental Watch");
+      diseases.push("Asma");
+      diseases.push("Alergi pernapasan");
+      recommendations.push("Instruksikan warga membuka ventilasi agar sirkulasi udara dan sinar matahari masuk.");
+      recommendations.push("Dorong screening TBC proaktif oleh Puskesmas pada zona padat, lembap, dan berventilasi buruk.");
+    } else if(humidity !== null && humidity > 50 && humidity <= 60){
+      if(status !== "HIGH") status = "MEDIUM";
+      diseases.push("Waspada penularan droplet respirasi");
+      recommendations.push("Tingkatkan ventilasi ruang tertutup dan kurangi kepadatan ruangan.");
+    }
+
+    if(temperature !== null && temperature >= 28 && humidity !== null && humidity > 55){
+      if(status !== "HIGH") status = "MEDIUM";
+      diseases.push("Ketidaknyamanan pernapasan pada kelompok rentan");
+      recommendations.push("Pastikan ruang kelas, kantor, transportasi, dan rumah memiliki ventilasi silang.");
+    }
+
+    return {
+      status,
+      diseases: [...new Set(diseases)],
+      recommendations: [...new Set(recommendations)]
+    };
+  }
+
+  function statusText(level){
+    if(level === "HIGH") return "BAHAYA (HIGH RISK)";
+    if(level === "MEDIUM") return "PERHATIAN (MEDIUM RISK)";
+    return "AMAN (LOW RISK)";
+  }
+
+  function computeRisk(devices, bmkg, aqicn){
+    const sensorTemp = avg(devices.map(d => d.temp));
+    const sensorRh = avg(devices.map(d => d.rh));
+    const iaqAvg = avg(devices.map(d => d.iaq));
+    const avgPm1 = avg(devices.map(d => d.pm1));
+    const avgPm25Sensor = avg(devices.map(d => d.pm25));
+    const avgPm10Sensor = avg(devices.map(d => d.pm10));
+    const avgGas = avg(devices.map(d => d.gas));
+
+    let dengueScore = 0;
+
+    if(sensorTemp !== null && sensorTemp >= 25 && sensorTemp <= 30) dengueScore += 2;
+    else if(sensorTemp !== null && sensorTemp >= 24 && sensorTemp <= 34) dengueScore += 1;
+
+    if(sensorRh !== null && sensorRh >= 70) dengueScore += 2;
+    else if(sensorRh !== null && sensorRh >= 60) dengueScore += 1;
+
+    if(bmkg.rainCount >= 3) dengueScore += 2;
+    else if(bmkg.rainCount >= 1) dengueScore += 1;
+
+    if(bmkg.humidCount >= 6) dengueScore += 1;
+
+    const dengue = dengueScore >= 5 ? "HIGH" : dengueScore >= 3 ? "MEDIUM" : "LOW";
+
+    const mold =
+      sensorRh !== null && sensorRh > 70 ? "HIGH" :
+      sensorRh !== null && sensorRh >= 60 ? "MEDIUM" :
+      "LOW";
+
+    const malaria =
+      sensorTemp !== null && sensorTemp >= 24 && sensorTemp <= 32 &&
+      sensorRh !== null && sensorRh >= 70 &&
+      bmkg.rainCount >= 3 ? "MEDIUM" : "LOW";
+
+    const indoorAir =
+      iaqAvg !== null && iaqAvg > 200 ? "HIGH" :
+      iaqAvg !== null && iaqAvg > 100 ? "MEDIUM" :
+      "LOW";
+
+    const outdoorAir =
+      aqicn && aqicn.aqi !== null && aqicn.aqi > 150 ? "HIGH" :
+      aqicn && aqicn.aqi !== null && aqicn.aqi > 100 ? "MEDIUM" :
+      "LOW";
+
+    const primaryAqi = aqicn && aqicn.aqi !== null ? Number(aqicn.aqi) : iaqAvg;
+    const pm25ForRisk = avgPm25Sensor !== null ? avgPm25Sensor : (aqicn ? aqicn.pm25 : null);
+    const pm10ForRisk = avgPm10Sensor !== null ? avgPm10Sensor : (aqicn ? aqicn.pm10 : null);
+
+    const tbcRisk = getTbcRisk(sensorTemp, sensorRh, primaryAqi, pm25ForRisk, pm10ForRisk);
+    const respiratory = identifyRespiratoryRisk(primaryAqi, sensorRh, sensorTemp);
+
+    let score = 100;
+
+    if(dengue === "HIGH") score -= 25;
+    if(dengue === "MEDIUM") score -= 12;
+
+    if(mold === "HIGH") score -= 20;
+    if(mold === "MEDIUM") score -= 10;
+
+    if(indoorAir === "HIGH") score -= 15;
+    if(indoorAir === "MEDIUM") score -= 8;
+
+    if(outdoorAir === "HIGH") score -= 15;
+    if(outdoorAir === "MEDIUM") score -= 8;
+
+    if(tbcRisk.level === "HIGH") score -= 15;
+    if(tbcRisk.level === "MEDIUM") score -= 8;
+
+    if(respiratory.status === "HIGH") score -= 18;
+    if(respiratory.status === "MEDIUM") score -= 9;
+
+    if(bmkg.rainCount >= 3) score -= 10;
+
+    score = Math.max(0, Math.min(100, score));
+
+    return {
+      dengue,
+      mold,
+      malaria,
+      indoorAir,
+      outdoorAir,
+      sensorTemp,
+      sensorRh,
+      iaqAvg,
+      avgPm1,
+      avgPm25Sensor,
+      avgPm10Sensor,
+      avgGas,
+      primaryAqi,
+      tbc: tbcRisk.level,
+      tbcDetail: tbcRisk,
+      respiratory,
+      score
+    };
+  }
+
+  function riskClass(level){
+    if(level === "LOW") return "low";
+    if(level === "MEDIUM") return "medium";
+    return "high";
+  }
+
+  function riskCard(title, level, text){
+    return `
+      <div class="risk ${riskClass(level)}">
+        <h3>${title}</h3>
+        <div class="level">${level}</div>
+        <p>${text}</p>
+      </div>
+    `;
+  }
+
+  function renderRisk(risk, bmkg, aqicn){
+    el.riskGrid.innerHTML = `
+      ${riskCard(
+        "Dengue / DBD Early Warning",
+        risk.dengue,
+        risk.dengue === "HIGH"
+          ? "Kombinasi suhu, kelembapan, dan potensi hujan mendukung kewaspadaan tinggi DBD. Perkuat PSN 3M Plus dalam 7–10 hari ke depan."
+          : risk.dengue === "MEDIUM"
+            ? "Kondisi cukup mendukung vektor DBD. Lakukan pemeriksaan genangan dan edukasi warga."
+            : "Kondisi saat ini belum menunjukkan kombinasi risiko tinggi DBD."
+      )}
+
+      ${riskCard(
+        "Malaria Environmental Watch",
+        risk.malaria,
+        "Indikator ini bukan deteksi malaria. Digunakan sebagai kewaspadaan lingkungan berbasis suhu, kelembapan, dan hujan, terutama untuk kasus impor atau wilayah reseptif."
+      )}
+
+      ${riskCard(
+        "Mold & Respiratory Health",
+        risk.mold,
+        risk.mold === "HIGH"
+          ? "RH rata-rata tinggi. Tingkatkan ventilasi, cek area lembap, kamar tidur, pakaian, dinding, dan ruang tertutup."
+          : risk.mold === "MEDIUM"
+            ? "RH berada pada zona pantau. Perhatikan ruangan tertutup dan waktu malam hari."
+            : "RH relatif terkendali untuk risiko mold."
+      )}
+
+      ${riskCard(
+        "Indoor Air Freshness",
+        risk.indoorAir,
+        risk.indoorAir === "HIGH"
+          ? "IAQ/VOC proxy dari Smart Citizen menunjukkan kualitas kesegaran udara kurang baik."
+          : risk.indoorAir === "MEDIUM"
+            ? "IAQ perlu dipantau sebagai indikator kesegaran udara dalam ruang."
+            : "IAQ relatif masih dalam kondisi baik."
+      )}
+
+      ${riskCard(
+        "Outdoor Air Quality",
+        risk.outdoorAir,
+        aqicn
+          ? "AQI luar ruang dari AQICN: " + aqicn.aqi + ". Stasiun: " + aqicn.station + ". PM2.5: " + (aqicn.pm25 ?? "-") + ", PM10: " + (aqicn.pm10 ?? "-") + "."
+          : "Data AQICN belum tersedia. Periksa token atau koordinat sensor."
+      )}
+
+      ${riskCard(
+        "TBC Environmental Watch",
+        risk.tbc,
+        risk.tbc === "HIGH"
+          ? "Kombinasi kelembapan, suhu, AQI, atau partikulat menunjukkan kewaspadaan tinggi. Ini bukan deteksi TBC, tetapi sinyal perlunya ventilasi silang, cahaya matahari, pengurangan kepadatan ruang, dan screening batuk lebih dari dua minggu."
+          : risk.tbc === "MEDIUM"
+            ? "Kondisi indoor perlu dipantau. Tingkatkan ventilasi, buka jendela, kurangi kepadatan ruangan, dan perkuat edukasi etika batuk."
+            : "Belum ada indikator kuat kondisi lingkungan terkait risiko berbasis ventilasi buruk."
+      )}
+
+      ${riskCard(
+        "Respiratory Health Watch",
+        risk.respiratory.status,
+        risk.respiratory.diseases.length
+          ? "Penyakit perhatian utama: " + risk.respiratory.diseases.join(", ") + "."
+          : "Belum ada indikator kuat untuk risiko penyakit pernapasan berbasis lingkungan."
+      )}
+
+      ${riskCard(
+        "Urban Resilience Score",
+        risk.score < 60 ? "HIGH" : risk.score < 80 ? "MEDIUM" : "LOW",
+        "Skor ketahanan lingkungan hari ini: " + risk.score + "/100. Semakin tinggi skor, semakin baik kondisi lingkungan dan kesiapsiagaan."
+      )}
+    `;
+  }
+
+
+  function renderRespiratoryPanel(risk){
+    const diseases = risk.respiratory.diseases.length
+      ? risk.respiratory.diseases.map(d => `<span class="pill">${d}</span>`).join("")
+      : `<span class="pill">Tidak ada penyakit perhatian utama</span>`;
+
+    const recs = risk.respiratory.recommendations.length
+      ? "<ul>" + risk.respiratory.recommendations.map(r => `<li>${r}</li>`).join("") + "</ul>"
+      : "<p>Belum ada rekomendasi khusus selain pemantauan berkala dan menjaga ventilasi.</p>";
+
+    el.respiratoryPanel.innerHTML = `
+      <div class="risk ${riskClass(risk.respiratory.status)}">
+        <h3>Status Wilayah Pernapasan</h3>
+        <div class="level">${statusText(risk.respiratory.status)}</div>
+        <p>
+          Indikator dihitung dari AQI/IAQ, kelembapan, dan suhu. Nilai AQI yang tinggi dikaitkan dengan ISPA dan PPOK; kelembapan tinggi dikaitkan dengan TBC environmental watch, asma, tungau, dan kapang; suhu hangat-lembap memperberat kenyamanan pernapasan kelompok rentan.
+        </p>
+        <div class="health-list">${diseases}</div>
+      </div>
+
+      <div class="risk ${riskClass(risk.tbc)}">
+        <h3>Tindakan Preventif Pemerintah</h3>
+        <div class="level">${risk.tbc} TBC WATCH</div>
+        ${recs}
+      </div>
+    `;
+  }
+
+  function renderTbcMatrix(risk){
+    const rhVal = risk.sensorRh;
+    const tempVal = risk.sensorTemp;
+    const aqiVal = risk.primaryAqi;
+    const pm25 = risk.avgPm25Sensor;
+    const pm10 = risk.avgPm10Sensor;
+    const gas = risk.avgGas;
+
+    const pmText = (pm25 !== null || pm10 !== null)
+      ? `PM2.5 ${fmt(pm25)} · PM10 ${fmt(pm10)}`
+      : "Tidak tersedia / gunakan AQICN jika ada";
+
+    el.tbcMatrixTable.innerHTML = `
+      <tr>
+        <td><strong>Humidity / Kelembapan</strong></td>
+        <td><span class="mono">${fmt(rhVal)}%</span></td>
+        <td>Kelembapan tinggi memperburuk kondisi ruang tertutup, mendukung kapang/tungau, dan menjadi sinyal ventilasi perlu diperbaiki.</td>
+        <td><span class="badge">${risk.tbcDetail.humidityLevel}</span></td>
+        <td>Low: &lt;40% · Medium: 40–60% · High: &gt;60%</td>
+      </tr>
+      <tr>
+        <td><strong>Temperature / Suhu</strong></td>
+        <td><span class="mono">${fmt(tempVal)}°C</span></td>
+        <td>Suhu hangat dapat memperburuk kenyamanan respirasi; rentang 31–37°C dipakai sebagai indikator kewaspadaan tinggi dalam matriks ini.</td>
+        <td><span class="badge">${risk.tbcDetail.temperatureLevel}</span></td>
+        <td>Low: &gt;37°C · Medium: 20–30°C · High: 31–37°C</td>
+      </tr>
+      <tr>
+        <td><strong>AQI / IAQ</strong></td>
+        <td><span class="mono">${fmt(aqiVal)}</span></td>
+        <td>Kualitas udara tidak sehat dapat melemahkan pertahanan paru dan memperburuk ISPA, PPOK, asma, serta kerentanan infeksi pernapasan.</td>
+        <td><span class="badge">${risk.tbcDetail.aqiLevel}</span></td>
+        <td>Low: 0–50 · Medium: 51–100 · High: &gt;100</td>
+      </tr>
+      <tr>
+        <td><strong>PM2.5 / PM10</strong></td>
+        <td><span class="mono">${pmText}</span></td>
+        <td>Partikulat tinggi dapat menyebabkan iritasi kronis pada saluran napas dan memperberat penyakit pernapasan.</td>
+        <td><span class="badge">${risk.tbcDetail.pmLevel}</span></td>
+        <td>Low: sesuai ambang · High: PM2.5 &gt;15 µg/m³ atau PM10 &gt;45 µg/m³</td>
+      </tr>
+      <tr>
+        <td><strong>Gas Resistance</strong></td>
+        <td><span class="mono">${fmt(gas)} Ω</span></td>
+        <td>Gas resistance tinggi pada BME68x umumnya mengindikasikan VOC lebih rendah; gas resistance rendah perlu dipantau sebagai perubahan kualitas udara kimia dalam ruang.</td>
+        <td><span class="badge">INFO</span></td>
+        <td>Dipakai sebagai tren relatif, bukan ambang medis.</td>
+      </tr>
+    `;
+  }
+
+  function renderRecommendation(risk, bmkg, aqicn){
+    const items = [];
+
+    if(risk.dengue === "HIGH"){
+      items.push("Prioritaskan PSN 3M Plus: menguras, menutup, mendaur ulang/mengubur barang bekas, dan memeriksa talang, pot tanaman, ember, dispenser, serta wadah air.");
+      items.push("Gunakan prakiraan hujan sebagai pengingat pemeriksaan genangan selama 7–10 hari berikutnya.");
+      items.push("Koordinasikan surveilans jentik, edukasi warga, dan pemantauan wilayah sekitar node sensor dengan RH tinggi.");
+    } else if(risk.dengue === "MEDIUM"){
+      items.push("Lakukan pemeriksaan genangan air secara berkala dan perkuat edukasi PSN 3M Plus.");
+    }
+
+    if(risk.mold !== "LOW"){
+      items.push("Untuk mold dan kesehatan pernapasan: buka ventilasi saat kelembapan turun, gunakan exhaust fan/dehumidifier, dan cek area lembap di kamar tidur.");
+    }
+
+    if(risk.indoorAir !== "LOW"){
+      items.push("Untuk IAQ/VOC dalam ruang: tingkatkan ventilasi, cek aktivitas memasak, pembersih, dupa, cat, atau furnitur baru yang dapat meningkatkan VOC.");
+    }
+
+    if(risk.outdoorAir !== "LOW"){
+      items.push("Untuk kualitas udara luar ruang: kurangi aktivitas luar ruang saat AQI tinggi, gunakan masker bila perlu, dan pantau kelompok rentan seperti anak-anak, lansia, dan penderita asma.");
+    }
+
+    if(risk.tbc !== "LOW"){
+      items.push("Untuk TBC Environmental Watch: tingkatkan ventilasi silang, buka jendela secara berkala, kurangi kepadatan ruang, pastikan cahaya matahari masuk, dan dorong pemeriksaan kesehatan bagi warga dengan batuk lebih dari dua minggu.");
+    }
+
+    if(risk.respiratory && risk.respiratory.recommendations.length){
+      risk.respiratory.recommendations.forEach(item => items.push(item));
+    }
+
+    if(bmkg.rainCount > 0){
+      items.push("BMKG menunjukkan indikasi hujan pada beberapa slot prakiraan. Perkuat pembersihan saluran, wadah air terbuka, dan titik genangan.");
+    }
+
+    items.push("Dashboard ini hanya indikator kewaspadaan lingkungan. Keputusan kesehatan publik tetap mengikuti arahan Dinas Kesehatan dan surveilans resmi.");
+
+    el.recommendationBox.innerHTML = "<ol>" + items.map(i => `<li>${i}</li>`).join("") + "</ol>";
+  }
+
+  function renderDevices(devices){
+    el.deviceTable.innerHTML = devices.map(d => {
+      const online = d.state === "online" || d.state === "has_published";
+      const coord =
+        d.location.latitude !== null && d.location.longitude !== null
+          ? `${fmt(d.location.latitude)}, ${fmt(d.location.longitude)}`
+          : "-";
+
+      return `
+        <tr>
+          <td><strong>${d.name}</strong><br><span class="mono">${d.id}</span></td>
+          <td><span class="badge">${online ? "ONLINE" : "OFFLINE"}</span></td>
+          <td><span class="mono">${fmt(d.temp)}</span> °C</td>
+          <td><span class="mono">${fmt(d.rh)}</span> %</td>
+          <td><span class="mono">${fmt(d.iaq)}</span></td>
+          <td>${coord}</td>
+          <td>${d.update}</td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  function initMap(){
+    if(map) return;
+
+    map = L.map("map").setView([-6.18, 106.63], 11);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom:19,
+      attribution:"&copy; OpenStreetMap"
+    }).addTo(map);
+  }
+
+  function renderMap(devices){
+    initMap();
+
+    markers.forEach(m => map.removeLayer(m));
+    markers = [];
+
+    const valid = devices.filter(d => d.location.latitude !== null && d.location.longitude !== null);
+
+    valid.forEach(d => {
+      const marker = L.marker([d.location.latitude, d.location.longitude])
+        .addTo(map)
+        .bindPopup(`
+          <strong>${d.name}</strong><br>
+          Device ID: ${d.id}<br>
+          Temp: ${fmt(d.temp)} °C<br>
+          RH: ${fmt(d.rh)} %<br>
+          IAQ: ${fmt(d.iaq)}
+        `);
+
+      markers.push(marker);
+    });
+
+    if(valid.length){
+      const group = L.featureGroup(markers);
+      map.fitBounds(group.getBounds().pad(.25));
+    }
+  }
+
+  function renderBmkg(bmkg){
+    const rows = bmkg.rows.slice(0, 8);
+
+    if(!rows.length){
+      el.bmkgBox.className = "message error";
+      el.bmkgBox.innerHTML = "Data BMKG belum terbaca. Periksa kode ADM4.";
+      return;
+    }
+
+    el.bmkgBox.className = "message";
+    el.bmkgBox.innerHTML = `
+      <strong>Sumber: BMKG Open Weather Forecast API</strong><br><br>
+      <strong>Ringkasan prakiraan:</strong><br>
+      Rata-rata suhu BMKG: ${fmt(bmkg.avgTemp)} °C<br>
+      Rata-rata kelembapan BMKG: ${fmt(bmkg.avgHum)} %<br>
+      Slot indikasi hujan: ${bmkg.rainCount}<br>
+      Slot RH ≥ 70%: ${bmkg.humidCount}<br><br>
+      <strong>Cuaca terdekat:</strong><br>
+      ${rows.map(r => {
+        return `${r.local_datetime || r.utc_datetime || "-"} · ${r.weather_desc || r.weather_desc_en || "-"} · ${r.t ?? "-"}°C · RH ${r.hu ?? "-"}%`;
+      }).join("<br>")}
+    `;
+  }
+
+  function renderAqicn(aqicn){
+    if(!aqicn){
+      el.aqicnBox.className = "message error";
+      el.aqicnBox.innerHTML = "Data AQICN belum berhasil dimuat. Periksa token atau koordinat sensor.";
+      el.outdoorAqi.textContent = "--";
+      return;
+    }
+
+    el.outdoorAqi.textContent = aqicn.aqi ?? "--";
+    el.aqicnBox.className = "message";
+    el.aqicnBox.innerHTML = `
+      <strong>Sumber: AQICN / World Air Quality Index API</strong><br><br>
+      Stasiun: ${aqicn.station}<br>
+      AQI: <strong>${aqicn.aqi ?? "-"}</strong><br>
+      PM2.5: ${aqicn.pm25 ?? "-"}<br>
+      PM10: ${aqicn.pm10 ?? "-"}<br>
+      NO₂: ${aqicn.no2 ?? "-"}<br>
+      SO₂: ${aqicn.so2 ?? "-"}<br>
+      O₃: ${aqicn.o3 ?? "-"}<br>
+      CO: ${aqicn.co ?? "-"}<br>
+      Update: ${aqicn.time}
+    `;
+  }
+
+  function drawSensorChart(devices){
+    const canvas = el.sensorChart;
+    const ctx = canvas.getContext("2d");
+    const w = canvas.width;
+    const h = canvas.height;
+
+    ctx.clearRect(0,0,w,h);
+
+    const values = [...devices.map(d=>d.temp), ...devices.map(d=>d.rh)]
+      .filter(v => v !== null && !Number.isNaN(v));
+
+    if(!values.length){
+      ctx.fillStyle = "#6b7280";
+      ctx.font = "16px Arial";
+      ctx.fillText("Data sensor belum tersedia untuk chart.",40,60);
+      return;
+    }
+
+    const maxValue = Math.max(100, ...values);
+    const left = 60, top = 35, bottom = 55, right = 30;
+    const chartW = w - left - right;
+    const chartH = h - top - bottom;
+    const groupW = chartW / devices.length;
+    const barW = Math.min(48, groupW / 4);
+
+    ctx.strokeStyle = "#e5e7eb";
+    ctx.lineWidth = 1;
+
+    for(let i=0;i<=5;i++){
+      const y = top + chartH * i / 5;
+      ctx.beginPath();
+      ctx.moveTo(left,y);
+      ctx.lineTo(w-right,y);
+      ctx.stroke();
+
+      const label = maxValue - maxValue * i / 5;
+      ctx.fillStyle = "#6b7280";
+      ctx.font = "12px Arial";
+      ctx.fillText(label.toFixed(0),20,y+4);
+    }
+
+    devices.forEach((d,i)=>{
+      const x = left + groupW * i + groupW / 2;
+      const tempH = d.temp !== null ? (d.temp / maxValue) * chartH : 0;
+      const rhH = d.rh !== null ? (d.rh / maxValue) * chartH : 0;
+
+      ctx.fillStyle = "#0066ff";
+      ctx.fillRect(x - barW - 5, top + chartH - tempH, barW, tempH);
+
+      ctx.fillStyle = "#10b981";
+      ctx.fillRect(x + 5, top + chartH - rhH, barW, rhH);
+
+      ctx.fillStyle = "#111827";
+      ctx.font = "bold 13px Arial";
+      ctx.fillText(d.id, x - 22, h - 24);
+    });
+
+    ctx.fillStyle = "#0066ff";
+    ctx.fillRect(w - 255,18,12,12);
+    ctx.fillStyle = "#111827";
+    ctx.font = "13px Arial";
+    ctx.fillText("Temperature °C", w - 237, 29);
+
+    ctx.fillStyle = "#10b981";
+    ctx.fillRect(w - 130,18,12,12);
+    ctx.fillStyle = "#111827";
+    ctx.fillText("Humidity %", w - 112, 29);
+  }
+
+  async function loadDashboard(){
+    try{
+      el.deviceTable.innerHTML = `<tr><td colspan="7"><div class="message">Memuat device...</div></td></tr>`;
+      el.riskGrid.innerHTML = `<div class="message">Menghitung risiko...</div>`;
+      el.bmkgBox.className = "message";
+      el.bmkgBox.innerHTML = "Mengambil prakiraan BMKG...";
+      el.aqicnBox.className = "message";
+      el.aqicnBox.innerHTML = "Mengambil data AQICN...";
+
+      const selected = el.deviceMode.value;
+      const deviceIds = selected === "all" ? SMART_DEVICES : [selected];
+
+      const smartResults = await Promise.allSettled(deviceIds.map(fetchSmartDevice));
+      const devices = smartResults
+        .filter(r => r.status === "fulfilled")
+        .map(r => r.value);
+
+      const bmkgJson = await fetchBmkg(el.adm4Input.value.trim());
+      const bmkg = analyzeBmkg(bmkgJson);
+
+      const avgLat = avgCoordinate(devices, "latitude");
+      const avgLon = avgCoordinate(devices, "longitude");
+
+      let aqicn = null;
+      try {
+        aqicn = await fetchAqicnByGeo(avgLat, avgLon);
+      } catch(e) {
+        console.warn("AQICN gagal dimuat:", e);
+      }
+
+      const risk = computeRisk(devices, bmkg, aqicn);
+
+      el.avgTemp.textContent = fmt(risk.sensorTemp);
+      el.avgHum.textContent = fmt(risk.sensorRh);
+      el.rainWatch.textContent = bmkg.rainCount;
+      el.dengueLevel.textContent = risk.dengue;
+      el.respiratoryLevel.textContent = risk.respiratory.status;
+      el.tbcLevel.textContent = risk.tbc;
+      el.resilienceScore.textContent = risk.score;
+
+      renderDevices(devices);
+      renderMap(devices);
+      renderBmkg(bmkg);
+      renderAqicn(aqicn);
+      renderRisk(risk, bmkg, aqicn);
+      renderRespiratoryPanel(risk);
+      renderTbcMatrix(risk);
+      renderRecommendation(risk, bmkg, aqicn);
+      drawSensorChart(devices);
+
+    }catch(error){
+      console.error(error);
+
+      el.riskGrid.innerHTML = `
+        <div class="message error">
+          Dashboard gagal dimuat. Periksa koneksi, kode ADM4 BMKG, atau akses API.
+        </div>
+      `;
+
+      el.bmkgBox.className = "message error";
+      el.bmkgBox.innerHTML = "Gagal mengambil data BMKG atau sensor.";
+    }
+  }
+
+  el.refreshBtn.addEventListener("click", loadDashboard);
+  el.deviceMode.addEventListener("change", loadDashboard);
+
+  document.addEventListener("DOMContentLoaded", loadDashboard);
+  setInterval(loadDashboard, 300000);
+</script>
+</body>
+</html>
