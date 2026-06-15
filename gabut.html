@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Number Chain</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d0f;
+      --surface: #18181c;
+      --surface2: #222228;
+      --border: rgba(255,255,255,0.08);
+      --text: #f0f0f2;
+      --muted: #7a7a88;
+      --accent: #7f77dd;
+      --accent2: #1d9e75;
+      --danger: #e24b4a;
+      --warn: #ef9f27;
+      --radius: 12px;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 20px 16px 40px;
+      user-select: none;
+    }
+
+    h1 {
+      font-size: clamp(22px, 5vw, 32px);
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 4px;
+      color: var(--text);
+    }
+
+    .tagline {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    /* HUD */
+    .hud {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      width: 100%;
+      max-width: 520px;
+      margin-bottom: 14px;
+    }
+
+    .hud-card {
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .hud-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .hud-value {
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--text);
+    }
+
+    #timer-val { color: var(--accent); transition: color 0.2s; }
+    #timer-val.warn { color: var(--warn); }
+    #timer-val.danger { color: var(--danger); }
+
+    /* Timer bar */
+    .timer-bar-wrap {
+      width: 100%;
+      max-width: 520px;
+      height: 5px;
+      background: var(--surface2);
+      border-radius: 99px;
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+
+    .timer-bar-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 99px;
+      transition: width 0.1s linear, background 0.3s;
+    }
+
+    /* Board */
+    .board-wrap {
+      width: 100%;
+      max-width: 520px;
+      aspect-ratio: 1;
+      position: relative;
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+
+    .num-btn {
+      position: absolute;
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.1s, background 0.15s, border-color 0.15s, opacity 0.2s;
+      transform: translate(-50%, -50%);
+      line-height: 1;
+    }
+
+    .num-btn.next {
+      border-color: var(--accent);
+      background: rgba(127,119,221,0.18);
+      box-shadow: 0 0 0 3px rgba(127,119,221,0.25);
+    }
+
+    .num-btn:hover:not(:disabled) {
+      background: rgba(255,255,255,0.06);
+      transform: translate(-50%, -50%) scale(1.12);
+    }
+
+    .num-btn:active:not(:disabled) {
+      transform: translate(-50%, -50%) scale(0.95);
+    }
+
+    .num-btn.correct {
+      background: rgba(29,158,117,0.25);
+      border-color: var(--accent2);
+      animation: pop 0.3s ease forwards;
+      pointer-events: none;
+    }
+
+    .num-btn.wrong {
+      background: rgba(226,75,74,0.25);
+      border-color: var(--danger);
+      animation: shake 0.35s ease;
+    }
+
+    .num-btn.fading { opacity: 0; pointer-events: none; transition: opacity 0.4s; }
+
+    @keyframes pop {
+      0% { transform: translate(-50%,-50%) scale(1); }
+      50% { transform: translate(-50%,-50%) scale(1.35); }
+      100% { transform: translate(-50%,-50%) scale(1); opacity: 0; }
+    }
+
+    @keyframes shake {
+      0%,100% { transform: translate(-50%,-50%) translateX(0); }
+      20% { transform: translate(-50%,-50%) translateX(-8px); }
+      40% { transform: translate(-50%,-50%) translateX(8px); }
+      60% { transform: translate(-50%,-50%) translateX(-5px); }
+      80% { transform: translate(-50%,-50%) translateX(5px); }
+    }
+
+    /* Overlays */
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(13,13,15,0.92);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      border-radius: var(--radius);
+      z-index: 10;
+      backdrop-filter: blur(4px);
+    }
+
+    .overlay h2 {
+      font-size: 28px;
+      font-weight: 800;
+    }
+
+    .overlay p {
+      font-size: 14px;
+      color: var(--muted);
+      text-align: center;
+      max-width: 280px;
+    }
+
+    .overlay .big-score {
+      font-size: 52px;
+      font-weight: 800;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .btn-start {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 99px;
+      padding: 12px 32px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 4px;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    .btn-start:hover { opacity: 0.85; }
+    .btn-start:active { transform: scale(0.97); }
+
+    .best-label { font-size: 13px; color: var(--muted); }
+    .best-val { font-size: 20px; font-weight: 700; color: var(--accent2); }
+
+    /* Combo flash */
+    .combo-flash {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%,-50%);
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--accent);
+      pointer-events: none;
+      opacity: 0;
+      z-index: 5;
+    }
+    .combo-flash.show { animation: comboPop 0.6s ease forwards; }
+    @keyframes comboPop {
+      0%   { opacity: 1; transform: translate(-50%,-60%) scale(0.6); }
+      40%  { opacity: 1; transform: translate(-50%,-80%) scale(1.2); }
+      100% { opacity: 0; transform: translate(-50%,-110%) scale(1); }
+    }
+
+    /* Info bar */
+    .info-bar {
+      width: 100%;
+      max-width: 520px;
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    /* Respawn ripple */
+    @keyframes ripple {
+      from { opacity: 0.6; transform: translate(-50%,-50%) scale(0); }
+      to   { opacity: 0;   transform: translate(-50%,-50%) scale(2.5); }
+    }
+    .ripple-el {
+      position: absolute;
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      pointer-events: none;
+      animation: ripple 0.5s ease forwards;
+      transform-origin: center;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Number Chain</h1>
+<p class="tagline">Klik angka secara urut secepat mungkin. Jangan sampai waktu habis.</p>
+
+<div class="hud">
+  <div class="hud-card">
+    <span class="hud-label">Waktu</span>
+    <span class="hud-value" id="timer-val">10.0</span>
+  </div>
+  <div class="hud-card">
+    <span class="hud-label">Skor</span>
+    <span class="hud-value" id="score-val">0</span>
+  </div>
+  <div class="hud-card">
+    <span class="hud-label">Level</span>
+    <span class="hud-value" id="level-val">1</span>
+  </div>
+  <div class="hud-card">
+    <span class="hud-label">Combo</span>
+    <span class="hud-value" id="combo-val" style="color:var(--warn)">×1</span>
+  </div>
+</div>
+
+<div class="timer-bar-wrap">
+  <div class="timer-bar-fill" id="timer-bar"></div>
+</div>
+
+<div class="board-wrap" id="board">
+  <!-- numbers injected here -->
+  <div class="combo-flash" id="combo-flash"></div>
+
+  <div class="overlay" id="start-overlay">
+    <h2>🔢 Number Chain</h2>
+    <p>Klik angka <strong>1, 2, 3…</strong> berurutan sebelum waktu habis. Setiap angka yang benar menambah waktu!</p>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+      <span class="best-label">Best Score</span>
+      <span class="best-val" id="best-display">0</span>
+    </div>
+    <button class="btn-start" onclick="startGame()">Mulai ▶</button>
+  </div>
+
+  <div class="overlay" id="gameover-overlay" style="display:none">
+    <h2 style="color:var(--danger)">⏰ Waktu Habis!</h2>
+    <span class="big-score" id="final-score">0</span>
+    <p id="gameover-msg">Coba lagi!</p>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+      <span class="best-label">Best Score</span>
+      <span class="best-val" id="best-gameover">0</span>
+    </div>
+    <button class="btn-start" onclick="startGame()">Main Lagi ▶</button>
+  </div>
+</div>
+
+<p class="info-bar">Setiap klik benar <strong>+waktu</strong> · Salah klik <strong>−1s</strong> · Level naik setiap 5 angka</p>
+
+<script>
+  const board = document.getElementById('board');
+  const timerVal = document.getElementById('timer-val');
+  const timerBar = document.getElementById('timer-bar');
+  const scoreEl = document.getElementById('score-val');
+  const levelEl = document.getElementById('level-val');
+  const comboEl = document.getElementById('combo-val');
+  const comboFlash = document.getElementById('combo-flash');
+  const startOverlay = document.getElementById('start-overlay');
+  const gameoverOverlay = document.getElementById('gameover-overlay');
+  const finalScoreEl = document.getElementById('final-score');
+  const gameoverMsg = document.getElementById('gameover-msg');
+  const bestDisplay = document.getElementById('best-display');
+  const bestGameover = document.getElementById('best-gameover');
+
+  let state = {};
+  let raf = null;
+  let lastTs = null;
+
+  function loadBest() {
+    try { return parseInt(localStorage.getItem('nc_best') || '0'); } catch(e) { return 0; }
+  }
+  function saveBest(v) {
+    try { localStorage.setItem('nc_best', v); } catch(e) {}
+  }
+
+  function boardSize() {
+    const r = board.getBoundingClientRect();
+    return { w: r.width, h: r.height };
+  }
+
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+  function randomPos(existingPos, btnR) {
+    const { w, h } = boardSize();
+    const margin = btnR + 4;
+    const maxTries = 60;
+    for (let t = 0; t < maxTries; t++) {
+      const x = clamp(Math.random() * w, margin, w - margin);
+      const y = clamp(Math.random() * h, margin, h - margin);
+      let ok = true;
+      for (const p of existingPos) {
+        const dx = x - p.x, dy = y - p.y;
+        if (Math.sqrt(dx*dx+dy*dy) < btnR * 2 + 8) { ok = false; break; }
+      }
+      if (ok) return { x, y };
+    }
+    return {
+      x: clamp(Math.random() * w, margin, w - margin),
+      y: clamp(Math.random() * h, margin, h - margin)
+    };
+  }
+
+  function levelConfig(lvl) {
+    const count = Math.min(6 + Math.floor(lvl * 1.5), 20);
+    const baseTime = Math.max(5, 10 - lvl * 0.3);
+    const bonusPerClick = Math.max(0.8, 2.5 - lvl * 0.1);
+    const penalty = 1;
+    return { count, baseTime, bonusPerClick, penalty };
+  }
+
+  function spawnNumbers() {
+    const { count } = levelConfig(state.level);
+    const nums = [];
+    for (let i = 1; i <= count; i++) nums.push(i);
+
+    const allBtns = board.querySelectorAll('.num-btn');
+    allBtns.forEach(b => b.remove());
+
+    const pos = [];
+    state.buttons = {};
+
+    nums.forEach(n => {
+      const p = randomPos(pos, 27);
+      pos.push(p);
+      const btn = document.createElement('button');
+      btn.className = 'num-btn' + (n === state.next ? ' next' : '');
+      btn.textContent = n;
+      btn.style.left = p.x + 'px';
+      btn.style.top = p.y + 'px';
+      btn.dataset.n = n;
+      btn.addEventListener('pointerdown', () => onClickNum(n, btn));
+      board.appendChild(btn);
+      state.buttons[n] = btn;
+    });
+  }
+
+  function onClickNum(n, btn) {
+    if (!state.running) return;
+    if (n === state.next) {
+      const cfg = levelConfig(state.level);
+      state.time = Math.min(state.time + cfg.bonusPerClick, cfg.baseTime + 5);
+      state.score += 10 * state.combo;
+      state.combo++;
+      state.next++;
+
+      btn.classList.add('correct');
+      spawnRipple(btn);
+
+      if (state.combo >= 3) showComboFlash(state.combo);
+
+      if (state.next > Object.keys(state.buttons).length) {
+        levelComplete();
+      } else {
+        const nb = state.buttons[state.next];
+        if (nb) nb.classList.add('next');
+        setTimeout(() => btn.classList.add('fading'), 280);
+      }
+    } else {
+      const cfg = levelConfig(state.level);
+      state.time = Math.max(0.5, state.time - cfg.penalty);
+      state.combo = 1;
+      btn.classList.add('wrong');
+      setTimeout(() => btn.classList.remove('wrong'), 380);
+    }
+    updateHUD();
+  }
+
+  function spawnRipple(btn) {
+    const r = document.createElement('div');
+    r.className = 'ripple-el';
+    r.style.left = btn.style.left;
+    r.style.top = btn.style.top;
+    board.appendChild(r);
+    r.addEventListener('animationend', () => r.remove());
+  }
+
+  function showComboFlash(c) {
+    comboFlash.textContent = `×${c} COMBO!`;
+    comboFlash.className = 'combo-flash';
+    void comboFlash.offsetWidth;
+    comboFlash.className = 'combo-flash show';
+  }
+
+  function levelComplete() {
+    state.level++;
+    state.next = 1;
+    const cfg = levelConfig(state.level);
+    state.time = Math.min(state.time + 3, cfg.baseTime + 8);
+    updateHUD();
+    setTimeout(() => spawnNumbers(), 200);
+  }
+
+  function updateHUD() {
+    const cfg = levelConfig(state.level);
+    const pct = Math.max(0, Math.min(100, (state.time / (cfg.baseTime + 5)) * 100));
+    timerBar.style.width = pct + '%';
+
+    const t = state.time;
+    timerVal.textContent = t.toFixed(1);
+    if (t <= 3) { timerVal.className = 'hud-value danger'; timerBar.style.background = 'var(--danger)'; }
+    else if (t <= 5) { timerVal.className = 'hud-value warn'; timerBar.style.background = 'var(--warn)'; }
+    else { timerVal.className = 'hud-value'; timerBar.style.background = 'var(--accent)'; }
+
+    scoreEl.textContent = state.score;
+    levelEl.textContent = state.level;
+    comboEl.textContent = '×' + state.combo;
+  }
+
+  function tick(ts) {
+    if (!state.running) return;
+    if (lastTs === null) lastTs = ts;
+    const dt = (ts - lastTs) / 1000;
+    lastTs = ts;
+
+    state.time -= dt;
+    if (state.time <= 0) {
+      state.time = 0;
+      updateHUD();
+      endGame();
+      return;
+    }
+    updateHUD();
+    raf = requestAnimationFrame(tick);
+  }
+
+  function startGame() {
+    if (raf) cancelAnimationFrame(raf);
+    lastTs = null;
+
+    const cfg = levelConfig(1);
+    state = {
+      running: true,
+      level: 1,
+      score: 0,
+      combo: 1,
+      next: 1,
+      time: cfg.baseTime,
+      buttons: {}
+    };
+
+    startOverlay.style.display = 'none';
+    gameoverOverlay.style.display = 'none';
+    updateHUD();
+    spawnNumbers();
+    raf = requestAnimationFrame(tick);
+  }
+
+  function endGame() {
+    state.running = false;
+    if (raf) { cancelAnimationFrame(raf); raf = null; }
+
+    const best = loadBest();
+    if (state.score > best) { saveBest(state.score); }
+    const newBest = loadBest();
+
+    finalScoreEl.textContent = state.score;
+    gameoverMsg.textContent = state.score >= newBest && state.score > 0
+      ? `🏆 Rekor baru! Level ${state.level} tercapai.`
+      : `Level ${state.level} tercapai. Bisa lebih baik lagi!`;
+    bestGameover.textContent = newBest;
+    gameoverOverlay.style.display = 'flex';
+
+    board.querySelectorAll('.num-btn').forEach(b => b.remove());
+  }
+
+  bestDisplay.textContent = loadBest();
+  bestGameover.textContent = loadBest();
+</script>
+</body>
+</html>
