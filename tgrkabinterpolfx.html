@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Time Series Smart Citizen - Kabupaten Tangerang</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#f4f7fb;--card:#ffffff;--primary:#0b63f6;--text:#111827;--muted:#6b7280;
+      --border:#e5e7eb;--shadow:0 18px 45px rgba(15,23,42,.10);--radius:22px;
+    }
+    *{box-sizing:border-box} body{margin:0;font-family:Arial,Helvetica,sans-serif;background:linear-gradient(135deg,#f8fbff 0%,#eef4ff 45%,#f7f9fc 100%);color:var(--text)}
+    .page{width:min(1220px,calc(100% - 28px));margin:auto;padding:28px 0 50px}.hero,.card{background:rgba(255,255,255,.92);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px;margin-bottom:22px;backdrop-filter:blur(14px)}
+    h1{margin:0 0 10px;font-size:clamp(28px,5vw,46px);letter-spacing:-.04em} h2{margin:0 0 16px;font-size:22px}.subtitle{color:var(--muted);line-height:1.6;margin:0}.controls{display:flex;gap:12px;flex-wrap:wrap;margin-top:22px} input,select,button{border:1px solid var(--border);border-radius:12px;padding:12px 14px;font-size:14px;background:#fff}button{background:var(--primary);color:#fff;font-weight:700;cursor:pointer}.device-grid,.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;margin-top:18px}.device,.summary{background:#f9fbff;border:1px solid var(--border);border-radius:16px;padding:16px}.device-name{font-weight:800;margin-bottom:8px}.small{color:var(--muted);font-size:13px;line-height:1.6}.value{font-size:30px;font-weight:900;letter-spacing:-.04em}.badge{display:inline-block;background:#e7f8f1;color:#047857;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800;margin-top:8px}.warn{background:#fff7e6;color:#92400e}.danger{background:#fee2e2;color:#991b1b}.chart-wrap{height:455px}.message{background:#fff7e6;color:#92400e;padding:14px;border-radius:14px;font-weight:700;line-height:1.6;margin-bottom:14px}.legend-note{color:var(--muted);font-size:13px;line-height:1.6;margin-top:12px}@media(max-width:640px){.hero,.card{padding:18px}.chart-wrap{height:360px}}
+  </style>
+</head>
+
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1>Time Series Sensor Kabupaten Tangerang</h1>
+      <p class="subtitle">Dashboard perbandingan 4 perangkat Smart Citizen: <b>19695, 19682, 19684, 19686</b>. Data historis diambil dari endpoint Smart Citizen API, lalu divisualisasikan sebagai time series.</p>
+      <div class="controls">
+        <select id="metricSelect">
+          <option value="pm1">PM1</option>
+          <option value="pm25">PM2.5</option>
+          <option value="pm10">PM10</option>
+          <option value="temperature" selected>Air Temperature</option>
+          <option value="humidity">Relative Humidity</option>
+          <option value="pressure">Barometric Pressure</option>
+          <option value="aqi">AQI</option>
+        </select>
+        <select id="rangeSelect">
+          <option value="24h">24 Jam Terakhir</option>
+          <option value="3d" selected>3 Hari Terakhir</option>
+          <option value="7d">7 Hari Terakhir</option>
+          <option value="14d">14 Hari Terakhir</option>
+          <option value="30d">30 Hari Terakhir</option>
+        </select>
+        <select id="rollupSelect">
+          <option value="30m">Rollup 30 Menit</option>
+          <option value="1h" selected>Rollup 1 Jam</option>
+          <option value="3h">Rollup 3 Jam</option>
+          <option value="6h">Rollup 6 Jam</option>
+          <option value="1d">Rollup 1 Hari</option>
+        </select>
+        <button id="reloadBtn">Muat Ulang Data</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Ringkasan Nilai Terakhir</h2>
+      <div id="summaryGrid" class="summary-grid"><div class="message">Memuat data...</div></div>
+    </section>
+
+    <section class="card">
+      <h2>Informasi Device</h2>
+      <div id="deviceGrid" class="device-grid"><div class="message">Memuat metadata device...</div></div>
+    </section>
+
+    <section class="card">
+      <h2 id="chartTitle">Chart Time Series</h2>
+      <div id="statusMessage" class="message">Mengambil data time series...</div>
+      <div class="chart-wrap"><canvas id="timeSeriesChart"></canvas></div>
+      <div class="legend-note">Catatan: apabila salah satu garis kosong, sensor tersebut tidak tersedia atau API belum mengembalikan data pada rentang waktu yang dipilih.</div>
+    </section>
+
+    <section class="card">
+      <h2>Analisis Otomatis</h2>
+      <div id="analysis" class="small">Analisis akan muncul setelah data berhasil dimuat.</div>
+    </section>
+  </main>
+
+  <script>
+    const DEVICES = ["19695", "19682", "19684", "19686"];
+    const API_V0 = "https://api.smartcitizen.me/v0/devices/";
+    const API_UI = "https://api.smartcitizen.me/ui/devices/";
+    const COLORS = ["#0b63f6", "#10b981", "#ef4444", "#f59e0b"];
+
+    const METRICS = {
+      pm1: { label:"PM1", unit:"µg/m³", patterns:["pm1", "pm 1", "particulate matter 1"] },
+      pm25: { label:"PM2.5", unit:"µg/m³", patterns:["pm2.5", "pm 2.5", "pm25", "particulate matter 2.5"] },
+      pm10: { label:"PM10", unit:"µg/m³", patterns:["pm10", "pm 10", "particulate matter 10"] },
+      temperature: { label:"Air Temperature", unit:"°C", patterns:["air temperature", "temperature", "temp", "ºc", "°c"] },
+      humidity: { label:"Relative Humidity", unit:"%", patterns:["relative humidity", "humidity"] },
+      pressure: { label:"Barometric Pressure", unit:"kPa", patterns:["barometric pressure", "atmospheric pressure", "pressure", "kpa"] },
+      aqi: { label:"AQI", unit:"", patterns:["aqi", "air quality index"] }
+    };
+
+    let chart;
+
+    document.getElementById("reloadBtn").addEventListener("click", loadDashboard);
+    document.getElementById("metricSelect").addEventListener("change", loadDashboard);
+    document.getElementById("rangeSelect").addEventListener("change", loadDashboard);
+    document.getElementById("rollupSelect").addEventListener("change", loadDashboard);
+
+    function getDateRange(){
+      const range = document.getElementById("rangeSelect").value;
+      const to = new Date();
+      const from = new Date(to);
+      const days = {"24h":1,"3d":3,"7d":7,"14d":14,"30d":30}[range] || 3;
+      from.setDate(from.getDate() - days);
+      return { from: from.toISOString(), to: to.toISOString() };
+    }
+
+    async function fetchJson(url){
+      const res = await fetch(url, { cache:"no-store" });
+      if(!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+      return res.json();
+    }
+
+    async function fetchDevice(deviceId){
+      try { return await fetchJson(API_V0 + deviceId); }
+      catch(e){ return await fetchJson(API_UI + deviceId); }
+    }
+
+    function getSensors(metadata){
+      if(metadata?.data?.sensors && Array.isArray(metadata.data.sensors)) return metadata.data.sensors;
+      if(metadata?.sensors && Array.isArray(metadata.sensors)) return metadata.sensors;
+      return [];
+    }
+
+    function sensorText(sensor){
+      return [sensor.name, sensor.description, sensor.unit, sensor.measurement?.name, sensor.measurement?.description]
+        .filter(Boolean).join(" ").toLowerCase();
+    }
+
+    function findSensor(sensors, metricKey){
+      const metric = METRICS[metricKey];
+      const scored = sensors.map(sensor => {
+        const text = sensorText(sensor);
+        let score = 0;
+        metric.patterns.forEach((p, idx) => { if(text.includes(p)) score += 100 - idx; });
+        if(metricKey === "pm25" && /pm\s?2\.5|pm25/.test(text)) score += 50;
+        if(metricKey === "pressure" && text.includes("kpa")) score += 20;
+        return {sensor, score};
+      }).filter(x => x.score > 0).sort((a,b) => b.score - a.score);
+      return scored.length ? scored[0].sensor : null;
+    }
+
+    async function fetchReadings(deviceId, sensorId, rollup, from, to){
+      const params = new URLSearchParams({ sensor_id: sensorId, rollup, from, to, function:"avg", all_intervals:"false" });
+      return fetchJson(`${API_V0}${deviceId}/readings?${params.toString()}`);
+    }
+
+    function normalizeReadings(json){
+      const source = Array.isArray(json?.readings) ? json.readings : Array.isArray(json) ? json : json?.data?.readings || [];
+      return source.map(item => {
+        const timeRaw = Array.isArray(item) ? item[0] : (item.recorded_at || item.time || item.date);
+        const valRaw = Array.isArray(item) ? item[1] : (item.value ?? item.avg ?? item.y);
+        return { x: new Date(timeRaw), y: Number(valRaw) };
+      }).filter(p => !isNaN(p.x.getTime()) && Number.isFinite(p.y)).sort((a,b) => a.x - b.x);
+    }
+
+    function lastSensorValue(sensor){
+      const value = sensor?.value ?? sensor?.last_reading?.value ?? sensor?.data?.value;
+      const number = Number(value);
+      return Number.isFinite(number) ? number : null;
+    }
+
+    function fmt(value, unit){
+      if(value === null || value === undefined || Number.isNaN(value)) return "-";
+      return `${Number(value).toFixed(2)} ${unit}`.trim();
+    }
+
+    function renderDevices(items){
+      document.getElementById("deviceGrid").innerHTML = items.map(item => `
+        <div class="device">
+          <div class="device-name">${item.name}</div>
+          <div class="small">
+            Device ID: ${item.id}<br>
+            Status: ${item.state || "-"}<br>
+            Last Reading: ${item.lastReading || "-"}<br>
+            Sensor: ${item.sensorName || "tidak ditemukan"}<br>
+            Sensor ID: ${item.sensorId || "-"}
+          </div>
+          <span class="badge">${item.points} titik data</span>
+        </div>`).join("");
+    }
+
+    function renderSummary(items, metric){
+      const m = METRICS[metric];
+      document.getElementById("summaryGrid").innerHTML = items.map(item => {
+        const cls = item.latest === null ? "summary danger" : "summary";
+        return `<div class="${cls}"><div class="small">${item.name}<br>Device ${item.id}</div><div class="value">${fmt(item.latest, m.unit)}</div></div>`;
+      }).join("");
+    }
+
+    function renderChart(series, metricKey){
+      const m = METRICS[metricKey];
+      const ctx = document.getElementById("timeSeriesChart");
+      if(chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: "line",
+        data: { datasets: series.map((s, i) => ({
+          label: s.label,
+          data: s.points,
+          borderColor: COLORS[i % COLORS.length],
+          backgroundColor: COLORS[i % COLORS.length],
+          borderWidth: 2.5,
+          pointRadius: 2,
+          pointHoverRadius: 5,
+          tension: 0.25,
+          spanGaps: true
+        }))},
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          parsing: false,
+          interaction: { mode: "nearest", intersect: false },
+          plugins: {
+            legend: { position: "bottom" },
+            tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmt(ctx.parsed.y, m.unit)}` } }
+          },
+          scales: {
+            x: {
+              type: "time",
+              time: { tooltipFormat: "dd MMM yyyy HH:mm" },
+              ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 8 },
+              title: { display: true, text: "Waktu" }
+            },
+            y: {
+              title: { display: true, text: `${m.label}${m.unit ? " ("+m.unit+")" : ""}` },
+              beginAtZero: ["pm1","pm25","pm10","aqi"].includes(metricKey)
+            }
+          }
+        }
+      });
+    }
+
+    function renderAnalysis(series, metricKey){
+      const m = METRICS[metricKey];
+      document.getElementById("analysis").innerHTML = series.map(s => {
+        const vals = s.points.map(p => p.y);
+        if(!vals.length) return `<strong>${s.label}</strong><br>Tidak ada data pada rentang waktu ini.<br><br>`;
+        const avg = vals.reduce((a,b)=>a+b,0)/vals.length;
+        return `<strong>${s.label}</strong><br>Rata-rata: ${fmt(avg,m.unit)}. Minimum: ${fmt(Math.min(...vals),m.unit)}. Maksimum: ${fmt(Math.max(...vals),m.unit)}. Nilai terakhir: ${fmt(vals[vals.length-1],m.unit)}.<br><br>`;
+      }).join("");
+    }
+
+    async function loadDashboard(){
+      const metricKey = document.getElementById("metricSelect").value;
+      const rollup = document.getElementById("rollupSelect").value;
+      const {from, to} = getDateRange();
+      const m = METRICS[metricKey];
+      const status = document.getElementById("statusMessage");
+
+      document.getElementById("chartTitle").innerText = `${m.label} - Perbandingan 4 Device Smart Citizen`;
+      status.className = "message";
+      status.innerText = "Mengambil metadata dan readings dari Smart Citizen API...";
+
+      const series = [];
+      const cards = [];
+
+      await Promise.all(DEVICES.map(async (deviceId, i) => {
+        try{
+          const meta = await fetchDevice(deviceId);
+          const sensors = getSensors(meta);
+          const sensor = findSensor(sensors, metricKey);
+          const name = meta.name || meta.data?.name || `Device ${deviceId}`;
+          const state = meta.state || meta.data?.state || "-";
+          const lastReading = meta.last_reading_at || meta.data?.last_reading_at || meta.last_recorded_at || "-";
+
+          let points = [];
+          let latest = null;
+          if(sensor){
+            latest = lastSensorValue(sensor);
+            try { points = normalizeReadings(await fetchReadings(deviceId, sensor.id, rollup, from, to)); }
+            catch(e) { console.warn("Readings kosong/gagal", deviceId, e); }
+            if(points.length) latest = points[points.length-1].y;
+          }
+
+          series[i] = { label: `${name} (${deviceId})`, points };
+          cards[i] = { id: deviceId, name, state, lastReading, sensorName: sensor?.name || null, sensorId: sensor?.id || null, points: points.length, latest };
+        }catch(e){
+          console.error(e);
+          series[i] = { label: `Device ${deviceId}`, points: [] };
+          cards[i] = { id: deviceId, name: `Device ${deviceId}`, state:"gagal memuat", lastReading:"-", sensorName:null, sensorId:null, points:0, latest:null };
+        }
+      }));
+
+      renderDevices(cards);
+      renderSummary(cards, metricKey);
+      renderChart(series, metricKey);
+      renderAnalysis(series, metricKey);
+
+      const totalPoints = series.reduce((sum,s)=>sum+s.points.length,0);
+      status.className = totalPoints ? "message" : "message danger";
+      status.innerText = totalPoints ? `Data berhasil diproses. Total ${totalPoints} titik data.` : "Data tidak ditemukan. Coba rentang waktu lebih panjang atau metric lain.";
+    }
+
+    loadDashboard();
+  </script>
+</body>
+</html>
